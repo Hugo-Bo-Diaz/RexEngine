@@ -317,10 +317,10 @@ bool SceneController::SceneControllerImpl::LoadObjects(pugi::xml_node& objectgro
 			ret = (*lID).CreateInstace(lProperties);
 			ret->mType = lID->GetObjectTypeIndex();
 			ret->Engine = new EngineAPI(mPartInst->mApp);
-			ret->collider->x = x;
-			ret->collider->y = y;
-			ret->collider->w = w;
-			ret->collider->h = h;
+			ret->collider.x = x;
+			ret->collider.y = y;
+			ret->collider.w = w;
+			ret->collider.h = h;
 
 			ret->Init();
 

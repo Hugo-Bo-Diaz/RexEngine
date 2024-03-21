@@ -16,7 +16,7 @@ class DLL_EXPORT GameObject
 {
 public:
 	//the collider is the main presence of the object inside of the engine
-	RXRect* collider;
+	RXRect collider;
 	std::type_index mType = std::type_index(typeid(*this));
 
 	//function that is called right after the engine creates the gameobject
@@ -32,16 +32,11 @@ public:
 
 	GameObject()
 	{
-		collider = new RXRect({ 0,0,0,0 });
+		collider = { 0,0,0,0 };
 	}
 	//visuals
 	~GameObject()
 	{
-		if (collider != nullptr)
-		{
-			delete collider;
-			collider = nullptr;
-		}
 	}
 
 	bool IsSameTypeAs(GameObject* lG)

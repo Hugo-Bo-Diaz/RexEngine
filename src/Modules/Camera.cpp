@@ -37,8 +37,8 @@ bool Camera::CameraImpl::Loop(float dt)//camera can't go offbounds
 	
 	if (target != nullptr)
 	{
-		position_x = (target->collider->x + target->collider->w / 2) - width / 2;
-		position_y = (target->collider->y + target->collider->h / 2) - height / 2;
+		position_x = (target->collider.x + target->collider.w / 2) - width / 2;
+		position_y = (target->collider.y + target->collider.h / 2) - height / 2;
 
 		int room_w, room_h;
 		mPartInst->mApp.GetModule<SceneController>().GetRoomSize(room_w, room_h);

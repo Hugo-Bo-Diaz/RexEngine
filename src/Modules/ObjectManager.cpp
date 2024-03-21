@@ -76,7 +76,7 @@ void ObjectManager::ObjectManagerImpl::RenderDebug()
 	for (std::list<GameObject*>::iterator it = objects.begin(); it != objects.end(); it++)
 	{
 		(*it)->RenderDebug();
-		mPartInst->mApp.GetModule<Render>().RenderRect(*(*it)->collider, RXColor { 0, 255, 0, 75 }, true, RenderQueue::RENDER_DEBUG, 0);
+		mPartInst->mApp.GetModule<Render>().RenderRect((*it)->collider, RXColor { 0, 255, 0, 75 }, true, RenderQueue::RENDER_DEBUG, 0);
 	}
 }
 
@@ -170,7 +170,7 @@ void ObjectManager::GetCollisions(RXRect* obj, std::vector<collision*>& collisio
 
 	for (std::list<GameObject*>::iterator it = lImpl->objects.begin(); it != lImpl->objects.end(); it++)
 	{
-		if (RXRectCollision((*it)->collider,obj))
+		if (RXRectCollision(&(*it)->collider,obj))
 		{
 			collision* col = new collision();
 			col->object = *it;
@@ -205,13 +205,13 @@ GameObject* ObjectManager::AddObject(int x, int y, int w_col, int h_col,std::typ
 	if (r != nullptr)
 	{
 		r->mType = lID->GetObjectTypeIndex();
-		r->collider = new RXRect();
+		r->collider = {0,0,0,0};
 
 		r->Engine = new EngineAPI(mApp);
-		r->collider->x = x;
-		r->collider->y = y;
-		r->collider->w = w_col;
-		r->collider->h = h_col;
+		r->collider.x = x;
+		r->collider.y = y;
+		r->collider.w = w_col;
+		r->collider.h = h_col;
 
 		r->Init();
 
