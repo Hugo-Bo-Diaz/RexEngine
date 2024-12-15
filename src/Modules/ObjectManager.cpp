@@ -35,9 +35,12 @@ bool ObjectManager::ObjectManagerImpl::Loop(float dt)
 	{
 		for (std::list<GameObject*>::iterator it = objects.begin(); it != objects.end(); it++)
 		{
-			if (!(*it)->Loop(dt))
+			if ((*it)->active)
 			{
-				ret = false;
+				if (!(*it)->Loop(dt))
+				{
+					ret = false;
+				}
 			}
 		}
 	}
@@ -159,7 +162,7 @@ std::vector<GameObject*>* ObjectManager::GetAllObjectsOfType(std::type_index inf
 	return ret;
 }
 
-void ObjectManager::GetCollisions(RXRect* obj, std::vector<collision*>& collisions)
+void ObjectManager::GetCollisions(RXRect* obj, std::vector<collision>& collisions)
 {
 	ObjectManagerImpl* lImpl = dynamic_cast<ObjectManagerImpl*>(mPartFuncts);
 	if (!lImpl)
@@ -172,20 +175,11 @@ void ObjectManager::GetCollisions(RXRect* obj, std::vector<collision*>& collisio
 	{
 		if (RXRectCollision(&(*it)->collider,obj))
 		{
-			collision* col = new collision();
-			col->object = *it;
+			collision col;
+			col.object = *it;
 			collisions.push_back(col);
 		}
 	}
-}
-
-void ObjectManager::ClearCollisionArray(std::vector<collision*>& collisions)
-{
-	for (std::vector<collision*>::iterator it = collisions.begin(); it != collisions.end(); it++)
-	{
-		delete *it;
-	}
-	collisions.clear();
 }
 
 GameObject* ObjectManager::AddObject(int x, int y, int w_col, int h_col,std::type_index lType)
@@ -201,29 +195,38 @@ GameObject* ObjectManager::AddObject(int x, int y, int w_col, int h_col,std::typ
 
 	std::list<ObjectProperty*> lPropList;
 
-	GameObject* r = (*lID).CreateInstace();
-	if (r != nullptr)
+	GameObject* r = nullptr;
+	if (lID != nullptr)
 	{
-		r->mType = lID->GetObjectTypeIndex();
-		r->collider = {0,0,0,0};
+		r = (*lID).CreateInstace();
+		if (r != nullptr)
+		{
+			r->mType = lID->GetObjectTypeIndex();
+			r->collider = {0,0,0,0};
 
-		r->Engine = new EngineAPI(mApp);
-		r->collider.x = x;
-		r->collider.y = y;
-		r->collider.w = w_col;
-		r->collider.h = h_col;
+			r->Engine = new EngineAPI(mApp);
+			r->collider.x = x;
+			r->collider.y = y;
+			r->collider.w = w_col;
+			r->collider.h = h_col;
 
-		r->Init();
+			r->Init();
 
-		lImpl->objects.push_back(r);
+			lImpl->objects.push_back(r);
+		}
+		else
+		{
+			std::stringstream str;
+			str << "Attempted to create: " << lType.name() << " as GameObject, Invalid operation, please make sure that the class inherits from GameObject!";
+			Logger::Console_log(LogLevel::LOG_ERROR, str.str().c_str());
+		}
 	}
 	else
 	{
 		std::stringstream str;
-		str << "Attempted to create: " << lType.name() << " as GameObject, Invalid operation, please make sure that the class inherits from GameObject!";
+		str << "Attempted to create: " << lType.name() << " as GameObject, Invalid operation, Factory not registered!";
 		Logger::Console_log(LogLevel::LOG_ERROR, str.str().c_str());
 	}
-
 	return r;
 }
 
@@ -353,7 +356,11 @@ void ObjectManager::DeleteObject(GameObject* _to_delete)
 		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
 		return;
 	}
-	lImpl->to_delete.insert(_to_delete);
+
+	if (std::find(lImpl->to_delete.begin(), lImpl->to_delete.end(), _to_delete) == lImpl->to_delete.end())
+	{
+		lImpl->to_delete.insert(_to_delete);
+	}
 }
 
 bool ObjectManager::isPaused()

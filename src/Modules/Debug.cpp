@@ -66,7 +66,7 @@ bool Debug::DebugImpl::Loop(float dt)
 		float averageDT = GetQueueMedianNumber(mUpdateTimesQueue);
 		float FPS = (1.0f / averageDT) * 1000;
 
-		lString += std::to_string(averageDT);
+		lString += std::to_string(FPS);
 		mPartInst->mApp.GetModule<Render>().RenderText(lString.c_str(), mPartInst->mDebugPanelFont, 10, 20, 0, {255,255,255,255},RenderQueue::RENDER_DEBUG,true);
 		
 		float virmem,physmem;

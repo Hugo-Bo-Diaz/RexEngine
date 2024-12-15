@@ -5,6 +5,10 @@
 #include "PartImpl.h"
 #include "SDL/include/SDL.h"
 #include "SceneControllerImpl.h"
+#include <glad/include/glad/glad.h>
+#include "glm/include/glm/common.hpp"
+#include "glm/include/glm/glm.hpp"
+
 
 class ParticleEmitter;
 class Font;
@@ -21,6 +25,8 @@ public:
 	void RenderMapBackground(TextureID aTexID, int depth, bool repeat_y, float parallax_factor_x = 1, float parallax_factor_y = 1);
 	void RenderMapLayer(layer* layer);
 	void RenderParticleEmitter(ParticleEmitter* emitter, RenderQueue aRenderQueue);
+
+	void SetSDL_GLContext(SDL_GLContext* aContext);
 
 protected:
 	bool Init();
@@ -45,6 +51,11 @@ private:
 	SDL_Renderer*	renderer;
 	SDL_Color		background;
 
+	SDL_GLContext maincontext;
+
+	glm::mat4x4 mOrthoProjection;
+
+
 	friend class Render;
 	Render* mPartInst;
 };
@@ -53,8 +64,13 @@ private:
 class BlitItemText : public BlitItem
 {
 public:
-	BlitItemText(const char* aText, Font* aFontUsed, SDL_Texture* aTexture) 
-		: mText(std::string(aText)), font_used(aFontUsed), lFontTexture(aTexture) {};
+	BlitItemText(const char* aText, Font* aFontUsed, SDL_Texture* aTexture)
+		: font_used(aFontUsed), lFontTexture(aTexture) {
+		mText = aText;
+	};
+	~BlitItemText() {
+		mText.clear();
+	}
 
 	std::string mText;
 	Font* font_used;
@@ -65,13 +81,18 @@ public:
 class BlitTexture : public BlitItem
 {
 public:
-	BlitTexture(SDL_Texture* aTex, SDL_Rect& aOnImage, float aParallax_x, float aParallax_y) 
-		: tex(aTex), on_image(aOnImage), parallax_x(aParallax_x), parallax_y(aParallax_y) {};
+	BlitTexture(SDL_Texture* aTex, SDL_Rect& aOnImage,float aScale_x, float aScale_y, float aParallax_x, float aParallax_y) 
+		: tex(aTex), on_image(aOnImage), scale_x(aScale_x), scale_y(aScale_y), parallax_x(aParallax_x), parallax_y(aParallax_y) {};
+
+	~BlitTexture() {
+	}
 
 	SDL_Texture* tex;
 	SDL_Rect on_image;
 	float parallax_x;
 	float parallax_y;
+	float scale_x;
+	float scale_y;
 
 	void Blit(Render& aRender, Camera& camera, Window& aWindow);
 };
@@ -80,6 +101,9 @@ class BlitLayer : public BlitItem
 {
 public:
 	BlitLayer(SDL_Texture* aTexture, layer* aLayer) : tex(aTexture), mLayer(aLayer) {};
+
+	~BlitLayer() {
+	}
 
 	layer* mLayer;
 	SDL_Texture* tex;
@@ -95,7 +119,7 @@ class BlitBackground : public BlitTexture
 {
 public:
 	BlitBackground(SDL_Texture* aTexID, int aDepth, bool aRepeat_y, float aParallax_factor_x, float aParallax_factor_y) 
-		: BlitTexture(aTexID, SDL_Rect{ 0,0,0,0 }, aParallax_factor_x, aParallax_factor_y), repeat_y(aRepeat_y) {
+		: BlitTexture(aTexID, SDL_Rect{ 0,0,0,0 }, 1.0f, 1.0f, aParallax_factor_x, aParallax_factor_y), repeat_y(aRepeat_y) {
 		depth = aDepth;
 	};
 	bool repeat_y;

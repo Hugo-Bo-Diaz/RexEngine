@@ -29,6 +29,9 @@
     <Filter Include="Header Files\EngineElements">
       <UniqueIdentifier>{ffaddc7a-a9c5-4526-b767-40778049d678}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Tools\GLAD">
+      <UniqueIdentifier>{7b15a0bc-e547-45a5-bece-9c61ca134e6e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="lib\pugiXML\src\pugixml.cpp">
@@ -96,6 +99,9 @@
     </ClCompile>
     <ClCompile Include="src\Modules\RXpch.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\glad\include\glad\glad.c">
+      <Filter>Source Files\Tools\GLAD</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -236,6 +242,15 @@
     </ClInclude>
     <ClInclude Include="src\Modules\RXpch.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\RXRand.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\glad\include\glad\glad.h">
+      <Filter>Source Files\Tools\GLAD</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\glad\include\glad\khrplatform.h">
+      <Filter>Source Files\Tools\GLAD</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

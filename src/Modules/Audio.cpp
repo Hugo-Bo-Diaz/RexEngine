@@ -113,7 +113,9 @@ bool Audio::AudioImpl::CleanUp()
 
 	for (std::map<AudioID,Music*>::iterator it = music_list.begin(); it != music_list.end(); it++)
 	{
-		Mix_FreeMusic((*it).second->music);
+		if((*it).second != nullptr)
+			Mix_FreeMusic((*it).second->music);
+
 		delete(*it).second;
 	}
 	music_list.clear();
@@ -173,7 +175,7 @@ AudioID Audio::LoadSFX(const char * file, float volume)
 
 	for (std::map<AudioID, SFX*>::iterator it = lImpl->sfx_list.begin(); it != lImpl->sfx_list.end(); it++)
 	{
-		if (std::strcmp((*it).second->path.c_str(), file) == 0)
+		if ((*it).second != nullptr && std::strcmp((*it).second->path.c_str(), file) == 0)
 		{
 			return (*it).first;
 		}
@@ -204,6 +206,13 @@ void Audio::PlayMusic(AudioID music_id, float fade_in_ms)
 	}
 
 	Music* music_selected = lImpl->music_list[music_id];
+	
+	if (music_selected == nullptr)
+	{
+		Logger::Console_log(LogLevel::LOG_ERROR, "Music was not found in the compatible list");
+		return;
+	}
+
 	if (music_id != lImpl->current_song)
 	{
 		lImpl->current_song = music_id;

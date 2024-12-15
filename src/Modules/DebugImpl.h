@@ -27,8 +27,8 @@ private:
 	Debug* mPartInst;
 	friend class Debug;
 
-	bool mIsDebugPanelActive = false;
-	bool mIsDebugSceneActive = false;
+	bool mIsDebugPanelActive = true;
+	bool mIsDebugSceneActive = true;
 
 	SDL_Keycode mKeyTogglePanel = SDL_SCANCODE_F1;
 	SDL_Keycode mKeyToggleScene = SDL_SCANCODE_F2;

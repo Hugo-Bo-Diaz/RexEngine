@@ -14,6 +14,13 @@ void Timer::Start()
 	time_paused = 0;
 }
 
+void Timer::Stop()
+{
+	started_at = SDL_GetTicks();
+	paused = true;
+	time_paused = 0;
+}
+
 float Timer::Read()
 {
 	if (!paused)
@@ -52,4 +59,9 @@ void Timer::Resume()
 void Timer::Reset()
 {
 	started_at = SDL_GetTicks();
+}
+
+bool Timer::isRunning()
+{
+	return !paused;
 }

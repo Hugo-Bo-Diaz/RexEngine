@@ -118,12 +118,11 @@ void ParticleEmitter::Destroy()
 {
 	for (int i = 0; i < MAX_PARTICLES; ++i)
 	{
-		if (particles[i] != NULL)
+		if (particles[i] != nullptr)
 		{
 			delete particles[i];
 		}
 	}
-
 	delete preset_for_emitter;
 	
 }

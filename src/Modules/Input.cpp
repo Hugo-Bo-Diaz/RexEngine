@@ -81,6 +81,7 @@ bool Input::InputImpl::Loop(float dt)
 				keyboard[i] = KEY_IDLE;
 		}
 	}
+
 	//controller stuff
 	if (controller_active)
 	{

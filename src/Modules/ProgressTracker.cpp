@@ -40,7 +40,7 @@ void ProgressTracker::ProgressTrackerImpl::LoadFromNode(Section* aSector, pugi::
 
 	for (pugi::xml_node iterator = lValsNode.first_child(); iterator; iterator = iterator.next_sibling())
 	{
-		aSector->Values.insert(std::make_pair(iterator.name(), std::stof(iterator.value())));
+		aSector->Values.insert(std::make_pair(iterator.name(), std::stof(iterator.first_child().value())));
 	}
 
 	pugi::xml_node lChildrenNode = aNode.child("ChildrenNode");
@@ -49,7 +49,7 @@ void ProgressTracker::ProgressTrackerImpl::LoadFromNode(Section* aSector, pugi::
 	{
 		Section* lSection = new Section();
 		LoadFromNode(lSection,iterator);
-		lSection->Children.insert(std::make_pair(iterator.name(), lSection));
+		aSector->Children.insert(std::make_pair(iterator.name(), lSection));
 	}
 
 }
@@ -71,10 +71,16 @@ bool ProgressTracker::LoadFile(const char* save_loc)
 	lStr << "Loading variables from: " << save_loc;
 	Logger::Console_log(LogLevel::LOG_INFO, lStr.str().c_str());
 
-	pugi::xml_document	config_file;
+	pugi::xml_document	save_file;
 	pugi::xml_node save_file_node;
+	pugi::xml_parse_result result = save_file.load_file(save_loc);
 
-	save_file_node = config_file.child("save_state");
+	if (result.status != pugi::xml_parse_status::status_ok)
+	{
+		std::ostringstream lStr;
+		lStr << "Could not load config xml file" << save_loc << "pugi error: " << result.description();
+	}
+	save_file_node = save_file.child("save_state");
 
 	if (lImpl->BaseSaveSection != nullptr)
 		delete lImpl->BaseSaveSection;
@@ -104,8 +110,8 @@ bool ProgressTracker::SaveFile(const char* save_loc)
 
 	save_file_node = config_file.append_child("save_state");
 
-	if (lImpl->BaseSaveSection != nullptr)
-		delete lImpl->BaseSaveSection;
+	//if (lImpl->BaseSaveSection != nullptr)
+	//	delete lImpl->BaseSaveSection;
 
 	lImpl->SaveToNode(lImpl->BaseSaveSection, save_file_node);
 

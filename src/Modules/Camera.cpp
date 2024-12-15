@@ -27,9 +27,6 @@ bool Camera::CameraImpl::Init()
 
 bool Camera::CameraImpl::Loop(float dt)//camera can't go offbounds
 {
-	screenarea.x = position_x;
-	screenarea.y = position_y;
-
 	int window_w, window_h;
 	mPartInst->mApp.GetModule<Window>().GetWindowSize(window_w, window_h);
 	screenarea.w = window_w;
@@ -81,6 +78,8 @@ bool Camera::CameraImpl::Loop(float dt)//camera can't go offbounds
 			alpha = 0;
 		}
 	}
+	screenarea.x = position_x;
+	screenarea.y = position_y;
 
 	if (is_covered)
 	{
@@ -102,8 +101,16 @@ bool Camera::CameraImpl::Loop(float dt)//camera can't go offbounds
 		{
 			alpha = 255;
 		}
+		if (is_covered)
+		{
+			Logger::Console_log(LogLevel::LOG_DEBUG, std::to_string(RXColor::GetBlack(alpha).a).c_str());
+			//mPartInst->mApp.GetModule<Render>().RenderRect(mPartInst->GetScreenArea(), RXColor::GetBlack(alpha), true, RenderQueue::RENDER_DEBUG, 0);
+			mPartInst->mApp.GetModule<Render>().RenderRect(mPartInst->GetScreenArea(), RXColor::GetBlack(alpha), true, RenderQueue::RENDER_DEBUG, 0);
+
+		}
 
 		//mPartInst->mApp.GetModule<Render>().DrawRect(mPartInst->screenarea, mPartInst->r, mPartInst->g, mPartInst->b, mPartInst->alpha,true,RenderQueue::RENDER_DEBUG,-1000);
+		//mPartInst->mApp.GetModule<Render>().RenderRect(mPartInst->GetScreenArea(), RXColor{ 255, 0, 0, alpha }, true, RenderQueue::RENDER_DEBUG, 0);
 	}
 	else { alpha = 0; }
 

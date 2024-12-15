@@ -19,7 +19,7 @@ static inline std::type_index GetTypeIndex()
 	return std::type_index(typeid(T));
 }
 
-float GetQueueMedianNumber(std::queue<float> lQueue);
+float GetQueueMedianNumber(std::queue<float>& lQueue);
 
 
 static inline void HideConsole()

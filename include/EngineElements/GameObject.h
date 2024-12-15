@@ -19,6 +19,8 @@ public:
 	RXRect collider;
 	std::type_index mType = std::type_index(typeid(*this));
 
+	bool active = true;
+
 	//function that is called right after the engine creates the gameobject
 	virtual void Init() {};
 	//function that is called every frame, it gives the Delta Time as an argument

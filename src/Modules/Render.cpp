@@ -17,6 +17,15 @@
 Render::Render(EngineAPI& aAPI) :Part("Render",aAPI)
 { 
 	mPartFuncts = new RenderImpl(this);
+	SDL_GL_LoadLibrary(NULL);
+
+	// Request an OpenGL 4.5 context (should be core)
+	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5);
+	// Also request a depth buffer
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 }
 
 #pragma region IMPLEMENTATION
@@ -43,11 +52,51 @@ bool Render::RenderImpl::LoadConfig(pugi::xml_node& config_node)
 	SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
 	Logger::Console_log(LogLevel::LOG_INFO, "Create SDL rendering context");
-	renderer = SDL_CreateRenderer(mPartInst->mApp.GetImplementation<Window,Window::WindowImpl>()->GetSDLWindow(), -1, flags);
-	if(!renderer)
+	//renderer = SDL_CreateRenderer(mPartInst->mApp.GetImplementation<Window,Window::WindowImpl>()->GetSDLWindow(), -1, flags);
+	//if(!renderer)
+	//{
+	//	ret = false;
+	//}
+
+	maincontext = SDL_GL_CreateContext(mPartInst->mApp.GetImplementation<Window, Window::WindowImpl>()->GetSDLWindow());
+	if (maincontext == NULL)
 	{
+		Logger::Console_log(LogLevel::LOG_ERROR, "Could not create OpenGL context");
 		ret = false;
 	}
+	else
+	{
+		SDL_GL_MakeCurrent(mPartInst->mApp.GetImplementation<Window, Window::WindowImpl>()->GetSDLWindow(), maincontext);
+		Logger::Console_log(LogLevel::LOG_INFO, "OpenGL loaded");
+		gladLoadGLLoader(SDL_GL_GetProcAddress);
+
+		SDL_GL_SetSwapInterval(1);
+
+		std::stringstream ss;
+		ss << "Vendor:";
+		ss << glGetString(GL_VENDOR);
+		Logger::Console_log(LogLevel::LOG_INFO, ss.str().c_str());
+		ss.str("");
+		ss << "Renderer:";
+		ss << glGetString(GL_RENDERER);
+		Logger::Console_log(LogLevel::LOG_INFO, ss.str().c_str());
+		ss.str("");
+		ss << "Version:";
+		ss << glGetString(GL_VERSION);
+		Logger::Console_log(LogLevel::LOG_INFO, ss.str().c_str());
+
+
+		// Disable depth test and face culling.
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_CULL_FACE);
+		
+		int win_x, win_y;
+		mPartInst->mApp.GetModule<Window>().GetWindowSize(win_x,win_y);
+
+		glViewport(0, 0, win_x, win_y);
+		glClearColor(0.0f, 0.5f, 1.0f, 0.0f);
+	}
+
 	return ret;
 }
 
@@ -90,32 +139,41 @@ bool Render::RenderImpl::Init()
 {
 	bool ret = true;
 
+
+	int win_x, win_y;
+	mPartInst->mApp.GetModule<Window>().GetWindowSize(win_x, win_y);
+
+	//mOrthoProjection = glm::ortho(0.0f, win_x,win_y, 0.0f, -1000.0f,1000.0f);
 	return ret;
 }
 
 bool Render::RenderImpl::Loop(float dt)
 {
 	bool ret = true;
-	SDL_RenderClear(renderer);
+	//SDL_RenderClear(renderer);
+
+	SDL_GL_SwapWindow(mPartInst->mApp.GetImplementation<Window,Window::WindowImpl>()->GetSDLWindow());
+
+	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
 
 	mDrawCallsLastFrame = 0;
 
-	for (int i = 0; i < RenderQueue::RENDER_MAX; i++)
-	{
-		std::priority_queue<BlitItem*, std::vector<BlitItem*>, Comparer>* lQueue = GetQueue((RenderQueue)i);
-		
-		while (!lQueue->empty())
-		{
-			BlitItem* lNextItem = lQueue->top();
-			lQueue->pop();
+	//for (int i = 0; i < RenderQueue::RENDER_MAX; i++)
+	//{
+	//	std::priority_queue<BlitItem*, std::vector<BlitItem*>, Comparer>* lQueue = GetQueue((RenderQueue)i);
+	//	while (!lQueue->empty())
+	//	{
+	//		BlitItem* lNextItem = lQueue->top();
+	//		lQueue->pop();
 
-			lNextItem->Blit(*mPartInst, mPartInst->mApp.GetModule<Camera>(), mPartInst->mApp.GetModule<Window>());
-			delete lNextItem;
-		}
-	}
+	//		lNextItem->Blit(*mPartInst, mPartInst->mApp.GetModule<Camera>(), mPartInst->mApp.GetModule<Window>());
+	//		delete lNextItem;
+	//	}
+	//}
 
-	SDL_SetRenderDrawColor(renderer, background.r, background.g, background.g, background.a);
-	SDL_RenderPresent(renderer);
+	//SDL_SetRenderDrawColor(renderer, background.r, background.g, background.g, background.a);
+	//SDL_RenderPresent(renderer);
 	return ret;
 }
 
@@ -146,6 +204,11 @@ void Render::RenderImpl::RenderParticleEmitter(ParticleEmitter* layer, RenderQue
 	GetQueue(aRenderQueue)->push(it);
 }
 
+void Render::RenderImpl::SetSDL_GLContext(SDL_GLContext* aContext)
+{
+	maincontext = *aContext;
+}
+
 
 void Render::RenderImpl::RenderMapBackground(TextureID aTexID, int depth, bool repeat_y, float parallax_factor_x, float parallax_factor_y)
 {
@@ -165,6 +228,7 @@ bool Render::RenderImpl::CleanUp()
 	bool ret = true;
 
 	SDL_DestroyRenderer(renderer);
+	SDL_GL_DeleteContext(maincontext);
 
 	//SDL_QuitSubSystem(SDL_INIT_VIDEO);
 	return ret;
@@ -194,7 +258,7 @@ void Render::CountDrawCall()
 	lImpl->mDrawCallsLastFrame++;
 }
 
-void Render::RenderTexture(TextureID aTexID, int x, int y,const RXRect& rect_on_image, int depth, RenderQueue aQueue, float angle, float parallax_factor_x, float parallax_factor_y, int center_x,int center_y)
+void Render::RenderTexture(TextureID aTexID, int x, int y,const RXRect& rect_on_image, int depth, RenderQueue aQueue, float angle, float aScale_x, float aScale_y, float parallax_factor_x, float parallax_factor_y, int center_x,int center_y)
 {
 	RenderImpl* lImpl = dynamic_cast<RenderImpl*>(mPartFuncts);
 	if (!lImpl)
@@ -209,7 +273,7 @@ void Render::RenderTexture(TextureID aTexID, int x, int y,const RXRect& rect_on_
 		return;
 	}
 
-	BlitTexture* it = new BlitTexture(lTex, SDL_Rect{ rect_on_image.x,rect_on_image.y,rect_on_image.w,rect_on_image.h }, parallax_factor_x, parallax_factor_y);
+	BlitTexture* it = new BlitTexture(lTex, SDL_Rect{ rect_on_image.x,rect_on_image.y,rect_on_image.w,rect_on_image.h }, aScale_x, aScale_y, parallax_factor_x, parallax_factor_y);
 	it->SetPosition(x, y);
 	it->SetCenter(center_x, center_y);
 	it->depth = depth;
@@ -219,9 +283,12 @@ void Render::RenderTexture(TextureID aTexID, int x, int y,const RXRect& rect_on_
 	lImpl->GetQueue(aQueue)->push(it);
 }
 
-void Render::RenderAnimation(Animation& aAnimation, int x, int y, int aDepth, RenderQueue aQueue, float angle, float parallax_factor_x, float parallax_factor_y, int center_x, int center_y)
+void Render::RenderAnimation(Animation& aAnimation, int x, int y, int aDepth, RenderQueue aQueue, float angle, float aScale_x, float aScale_y, float parallax_factor_x, float parallax_factor_y, int center_x, int center_y)
 {
-	RenderTexture(aAnimation.mTexture, x, y, aAnimation.GetCurrentFrame(), aDepth, aQueue, angle, parallax_factor_x, parallax_factor_y, center_x, center_y);
+	if (aAnimation.GetAmountOfFrames() == 0)
+		return;
+
+	RenderTexture(aAnimation.mTexture, x, y, aAnimation.GetCurrentFrame(), aDepth, aQueue, angle, aScale_x, aScale_y, parallax_factor_x, parallax_factor_y, center_x, center_y);
 }
 
 void Render::RenderText(const char* text, FontID font, int x, int y, int depth, const RXColor& aColor, RenderQueue aQueue, bool ignore_camera)
@@ -309,8 +376,8 @@ void BlitTexture::Blit(Render& aRender, Camera& camera, Window& aWindow)
 		rect.y = (float)y * scale;
 	}
 
-	rect.w = on_image.w * scale;
-	rect.h = on_image.h * scale;
+	rect.w = on_image.w * scale * scale_x;
+	rect.h = on_image.h * scale * scale_y;
 
 	SDL_Point p = { center_x,center_y };
 	
@@ -490,7 +557,7 @@ void BlitRect::Blit(Render& aRender, Camera& camera, Window& aWindow)
 
 	RXRect lRect = { temp.x,temp.y,temp.w,temp.h };
 	if (!camera.isOnScreen(lRect, false))
-
+		return;
 
 	SDL_SetRenderDrawBlendMode(aRender.GetSDL_Renderer(), SDL_BLENDMODE_BLEND);
 	SDL_SetRenderDrawColor(aRender.GetSDL_Renderer(), color.r, color.g, color.b, color.a);

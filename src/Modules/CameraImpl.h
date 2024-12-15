@@ -44,7 +44,7 @@ private:
 	float total_cover_time;
 	float falloff;
 
-	int alpha = 0;
+	uint8_t alpha = 0;
 
 	GameObject* target = nullptr;
 };

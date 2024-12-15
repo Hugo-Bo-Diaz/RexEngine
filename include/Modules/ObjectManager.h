@@ -77,9 +77,7 @@ public:
 	std::vector<GameObject*>* GetAllObjectsOfType(std::type_index);
 
 	//returns all collisions with that rectangle
-	void GetCollisions(RXRect* rect,std::vector<collision*>&collisions);
-	//clears the collision array that was recieved in the previous function
-	void ClearCollisionArray(std::vector<collision*>&collisions);
+	void GetCollisions(RXRect* rect,std::vector<collision>&collisions);
 
 	//adds a collider
 	int AddWall(RXRect& rect);

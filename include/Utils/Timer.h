@@ -8,6 +8,7 @@ class DLL_EXPORT Timer
 public:
 	Timer();
 	void Start();
+	void Stop();
 	float Read();
 	float Read_Sec();
 
@@ -15,6 +16,7 @@ public:
 	void Resume();
 
 	void Reset();
+	bool isRunning();
 
 	bool paused = false;
 

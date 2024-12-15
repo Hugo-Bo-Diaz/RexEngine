@@ -14,6 +14,10 @@ struct RXColor{
 	{
 		return r == other.r && g == other.g && b == other.b && a == other.a;
 	}
+
+	static RXColor GetBlack(uint8_t alpha) {
+		return { 0,0,0,alpha };
+	}
 };
 
 

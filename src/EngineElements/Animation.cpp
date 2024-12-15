@@ -11,7 +11,7 @@ void Animation::AddFrame(const RXRect& frame)
 void Animation::NextFrame()
 {
 	++current_frame;
-	if (current_frame >= frames.size()-1)
+	if (current_frame >= frames.size())
 	{
 		current_frame = 0;
 	}
@@ -34,7 +34,7 @@ void Animation::SetCurrentFrame(int aNewCurrentFrame)
 
 int Animation::GetAmountOfFrames()
 {
-	return current_frame;
+	return frames.size();
 }
 
 int Animation::GetCurrentFrameNumber()

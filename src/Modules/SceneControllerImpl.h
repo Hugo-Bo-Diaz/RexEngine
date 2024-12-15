@@ -38,7 +38,7 @@ struct layer
 
 	~layer()
 	{
-		delete data;
+		delete[] data;
 	}
 };
 

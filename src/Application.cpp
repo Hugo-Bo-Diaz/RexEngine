@@ -76,13 +76,7 @@ Application::Application(const char* aConfigFile, bool& aSuccesful)
 
 void Application::Run()
 {
-	ApplicationState state = CREATE;
-	if (!Init())
-	{
-		state = EXIT;
-		Logger::Console_log(LogLevel::LOG_ERROR, "Could not initialize engine!");
-	}
-	state = LOOP;
+	ApplicationState state = LOOP;
 
 	while (state != EXIT)
 	{
@@ -147,6 +141,8 @@ bool Application::Loop()
 	dt = update_timer.Read();
 	update_timer.Reset();
 
+	dt = min(80, dt);
+
 	bool ret = true;
 	for (std::list<Part*>::iterator it = parts.begin(); it != parts.end(); it++)
 	{
@@ -164,13 +160,21 @@ bool Application::Loop()
 	if (fps_cap != 0)
 	{
 		float time_left_of_the_frame = ms_of_frame - update_timer.Read();
+		//Logger::Console_log(LogLevel::LOG_DEBUG, std::to_string(time_left_of_the_frame).c_str());
 		if (time_left_of_the_frame > 0)
 		{
-			SDL_Delay(time_left_of_the_frame);
+			//sleep_for(time_left_of_the_frame);
+			//SDL_Delay(time_left_of_the_frame);
+			//static constexpr std::chrono::duration<double> MinSleepDuration(0);
+			//std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+			while (update_timer.Read() < ms_of_frame) {
+				//std::this_thread::sleep_for(MinSleepDuration);
+				std::this_thread::yield();
+			}
 		}
 	}
 
-	float base_ms_on_frame = (1000 / 60);
+	float base_ms_on_frame = (1000 / fps_cap);
 	dt =1/( base_ms_on_frame/ms_of_frame);
 	return ret;
 };

@@ -28,26 +28,26 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -84,7 +84,7 @@
       <SDLCheck>true</SDLCheck>
       <LanguageStandard>Default</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)lib;$(ProjectDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>RXpch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -130,6 +130,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="lib\glad\include\glad\glad.c" />
     <ClCompile Include="lib\pugiXML\src\pugixml.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -222,11 +223,14 @@
     <ClInclude Include="include\Modules\Window.h" />
     <ClInclude Include="include\RXColor.h" />
     <ClInclude Include="include\RXPoint.h" />
+    <ClInclude Include="include\RXRand.h" />
     <ClInclude Include="include\RXRect.h" />
     <ClInclude Include="include\Utils\Logger.h" />
     <ClInclude Include="include\Utils\MathHelp.h" />
     <ClInclude Include="include\Utils\Timer.h" />
     <ClInclude Include="include\Utils\Utils.h" />
+    <ClInclude Include="lib\glad\include\glad\glad.h" />
+    <ClInclude Include="lib\glad\include\glad\khrplatform.h" />
     <ClInclude Include="lib\pugiXML\src\pugiconfig.hpp" />
     <ClInclude Include="lib\pugiXML\src\pugixml.hpp" />
     <ClInclude Include="src\Modules\AudioImpl.h" />

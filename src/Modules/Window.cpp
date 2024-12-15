@@ -6,6 +6,7 @@
 
 #include "WindowImpl.h"
 #include "SDL/include/SDL_syswm.h"
+#include "RenderImpl.h"
 
 Window::Window(EngineAPI& aAPI): Part("Window",aAPI)
 {
@@ -59,7 +60,7 @@ bool Window::WindowImpl::LoadConfig(pugi::xml_node& config_node)
 
 	std::string title = config_node.child("window_title").attribute("value").as_string("DEFAULT_CAPTION");
 		
-	window = SDL_CreateWindow(title.c_str(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, flags);
+	window = SDL_CreateWindow(title.c_str(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, flags | SDL_WINDOW_OPENGL);
 
 	if (window == NULL)
 	{

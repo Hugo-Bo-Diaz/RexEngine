@@ -74,7 +74,7 @@ void GetAllExtensionPathRecursive(const char* path, const char* extension, std::
 
 }
 
-float GetQueueMedianNumber(std::queue<float> lQueue)
+float GetQueueMedianNumber(std::queue<float>& lQueue)
 {
 	float lSumOfallTimes = 0;
 	int lTotalTimes = lQueue.size();

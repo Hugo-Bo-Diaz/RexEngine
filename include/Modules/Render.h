@@ -42,6 +42,8 @@ public:
 
 	virtual void Blit(Render& aRender, Camera& camera, Window& aWindow) = 0;
 
+	virtual ~BlitItem() {};
+
 	void SetPosition(int aX, int aY)
 	{
 		x = aX;
@@ -78,9 +80,9 @@ public:
 	Render(EngineAPI& aAPI);
 
 	//renders a texture
-	void RenderTexture(TextureID aTexID, int x, int y,const RXRect& rect_on_image, int aDepth, RenderQueue aQueue = RenderQueue::RENDER_GAME, float angle = 0, float parallax_factor_x = 1, float parallax_factor_y = 1, int center_x = -1,int center_y = -1);
+	void RenderTexture(TextureID aTexID, int x, int y,const RXRect& rect_on_image, int aDepth, RenderQueue aQueue = RenderQueue::RENDER_GAME, float angle = 0, float aScale_x = 1.0f, float aScale_y = 1.0f, float parallax_factor_x = 1, float parallax_factor_y = 1, int center_x = -1,int center_y = -1);
 	//renders an animation
-	void RenderAnimation(Animation& aAnimation, int x, int y, int aDepth = 0, RenderQueue aQueue = RenderQueue::RENDER_GAME, float angle = 0, float parallax_factor_x = 1, float parallax_factor_y = 1, int center_x = -1, int center_y = -1);
+	void RenderAnimation(Animation& aAnimation, int x, int y, int aDepth = 0, RenderQueue aQueue = RenderQueue::RENDER_GAME, float angle = 0, float aScale_x = 1.0f, float aScale_y = 1.0f, float parallax_factor_x = 1, float parallax_factor_y = 1, int center_x = -1, int center_y = -1);
 
 	//renders a text
 	void RenderText(const char* text, FontID font, int x, int y, int depth, const RXColor& aColor,RenderQueue aQueue,bool ignore_camera = false);
