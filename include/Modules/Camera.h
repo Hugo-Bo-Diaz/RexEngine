@@ -43,7 +43,6 @@ public:
 
 	//returns the area the camera covers of the map
 	RXRect GetScreenArea();
-private:
 
 	class CameraImpl;
 };

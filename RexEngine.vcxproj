@@ -192,6 +192,7 @@
     <ClCompile Include="src\Utils\Logger.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="src\Utils\Renderer\OpenGLRenderer.cpp" />
     <ClCompile Include="src\Utils\Timer.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -249,6 +250,8 @@
     <ClInclude Include="src\Modules\TextImpl.h" />
     <ClInclude Include="src\Modules\TexturesImpl.h" />
     <ClInclude Include="src\Modules\WindowImpl.h" />
+    <ClInclude Include="src\Utils\Renderer\OpenGLRenderer.h" />
+    <ClInclude Include="src\Utils\Renderer\SpriteRenderer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

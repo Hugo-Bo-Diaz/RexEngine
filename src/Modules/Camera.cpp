@@ -6,6 +6,7 @@
 #include "Utils/Logger.h"
 
 #include "CameraImpl.h"
+#include <glm/include/glm/gtc/matrix_transform.hpp>
 
 
 Camera::Camera(EngineAPI& aAPI) : Part("Camera", aAPI)
@@ -21,7 +22,13 @@ bool Camera::CameraImpl::Init()
 	height = 576;//App->win->height;
 
 	screenarea = { 0,0,width,height };
+	int window_w, window_h;
 
+	mPartInst->mApp.GetModule<Window>().GetWindowSize(window_w, window_h);
+
+	mOrthoMatrix = glm::ortho(0.0f, 10.0f, 10.0f, 0.0f, -1000.0f, 1000.0f);
+	mViewMatrix = glm::lookAt(glm::vec3(0, 0, -1), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+	mViewMatrix = glm::inverse(mViewMatrix);
 	return true;
 }
 
@@ -113,6 +120,10 @@ bool Camera::CameraImpl::Loop(float dt)//camera can't go offbounds
 		//mPartInst->mApp.GetModule<Render>().RenderRect(mPartInst->GetScreenArea(), RXColor{ 255, 0, 0, alpha }, true, RenderQueue::RENDER_DEBUG, 0);
 	}
 	else { alpha = 0; }
+
+	mOrthoMatrix = glm::ortho(0.0f, 10.0f, 0.0f, 10.0f, -1000.0f, 1000.0f);
+	mViewMatrix = glm::lookAt(glm::vec3(0, 0, -1), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+	mViewMatrix = glm::inverse(mViewMatrix);
 
 	return true;
 }

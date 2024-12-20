@@ -8,8 +8,6 @@
 
 #define MAXFRAMES 20
 
-typedef unsigned int TextureID;
-
 enum Animation_loop
 {
 	ANIM_LOOP,

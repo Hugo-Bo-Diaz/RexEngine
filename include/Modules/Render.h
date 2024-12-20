@@ -22,45 +22,7 @@ enum RenderQueue
 };
 
 
-class BlitItem
-{
-public:
-	//position
-	int x;
-	int y;
-	int depth;
 
-	RXColor color;
-
-	//rotation point and angle
-	//SDL_Point img_center;
-	int center_x;
-	int center_y;
-	float angle;
-
-	bool ignore_camera = false;
-
-	virtual void Blit(Render& aRender, Camera& camera, Window& aWindow) = 0;
-
-	virtual ~BlitItem() {};
-
-	void SetPosition(int aX, int aY)
-	{
-		x = aX;
-		y = aY;
-	}
-
-	void SetCenter(int aCenterX, int aCenterY)
-	{
-		center_x = aCenterX;
-		center_y = aCenterY;
-	}
-
-	bool operator<(const BlitItem& rhs) const
-	{
-		return rhs.depth > depth;
-	}
-};
 
 class Comparer
 {
@@ -70,6 +32,9 @@ public:
 		return itemB->depth > itemA->depth;
 	}
 };
+
+typedef unsigned int RexTextureID;
+typedef unsigned int RexShaderID;
 
 struct SDL_Renderer;
 
@@ -96,10 +61,68 @@ public:
 	//adds one to the draw calls on this frame
 	void CountDrawCall();
 
-	//returns the SDL render for advanced operations
-	SDL_Renderer* GetSDL_Renderer();
+
+
+	//loads a texutre into memory and returns a handle in the parameter
+	bool LoadTexture(const char* aPath, RexTextureID& aResultID) { return false; };
+	//frees a texture from memory
+	bool DestroyTexture(RexTextureID aResultID) { return false; };
+
+	//loads a shader into memory and returns a handle in the parameter
+	bool LoadShader(const char* aPathVertex, const char* aPathFragment, RexShaderID& aShader) { return false; };
+	//sets the shader to be used
+	bool SetShader(RexShaderID aShader) { return false; };
+	//sets the shader to the default render shader
+	void SetDefaultShader() {};
+	//Destroys the shader referenced
+	bool DestroyTexture(RexShaderID aResultID) { return false; };
+
+	//
+
+	bool UpdateRender() { return true; };
+
 
 	class RenderImpl;
+};
+
+class BlitItem
+{
+public:
+	//position
+	int x;
+	int y;
+	int depth;
+
+	RXColor color;
+
+	//rotation point and angle
+	//SDL_Point img_center;
+	int center_x;
+	int center_y;
+	float angle;
+
+	bool ignore_camera = false;
+
+	virtual void Blit(Render::RenderImpl& aRender, Camera& camera, Window& aWindow) = 0;
+
+	virtual ~BlitItem() {};
+
+	void SetPosition(int aX, int aY)
+	{
+		x = aX;
+		y = aY;
+	}
+
+	void SetCenter(int aCenterX, int aCenterY)
+	{
+		center_x = aCenterX;
+		center_y = aCenterY;
+	}
+
+	bool operator<(const BlitItem& rhs) const
+	{
+		return rhs.depth > depth;
+	}
 };
 
 #endif // !RENDER__H

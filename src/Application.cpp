@@ -67,7 +67,7 @@ Application::Application(const char* aConfigFile, bool& aSuccesful)
 	parts.push_back(new Particles(*mAPI));
 	parts.push_back(new Audio(*mAPI));
 	parts.push_back(new Render(*mAPI));
-	parts.push_back(new Textures(*mAPI));
+	//parts.push_back(new Textures(*mAPI));
 	parts.push_back(new Text(*mAPI));
 	parts.push_back(new ProgressTracker(*mAPI));
 	parts.push_back(new Debug(*mAPI));

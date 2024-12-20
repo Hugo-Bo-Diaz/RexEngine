@@ -10,13 +10,18 @@
 
 #include "RenderImpl.h"
 #include "TexturesImpl.h"
+#include "CameraImpl.h"
 #include "TextImpl.h"
 #include "WindowImpl.h"
 #include "EngineAPI.h"
 
+#include "../Utils/Renderer/OpenGLRenderer.h"
+
+#include <glm/include/glm/gtc/type_ptr.hpp>
+
 Render::Render(EngineAPI& aAPI) :Part("Render",aAPI)
 { 
-	mPartFuncts = new RenderImpl(this);
+	mPartFuncts = new OpenGL2DRenderer(this);
 	SDL_GL_LoadLibrary(NULL);
 
 	// Request an OpenGL 4.5 context (should be core)
@@ -26,6 +31,7 @@ Render::Render(EngineAPI& aAPI) :Part("Render",aAPI)
 	// Also request a depth buffer
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+
 }
 
 #pragma region IMPLEMENTATION
@@ -36,10 +42,10 @@ bool Render::RenderImpl::LoadConfig(pugi::xml_node& config_node)
 
 	pugi::xml_node& color_node = config_node.child("bkg_color");
 
-	background.r = color_node.attribute("r").as_float(0);
-	background.g = color_node.attribute("g").as_float(0);
-	background.b = color_node.attribute("b").as_float(0);
-	background.a = color_node.attribute("a").as_float(0);
+	backgroundColor.r = color_node.attribute("r").as_float(0);
+	backgroundColor.g = color_node.attribute("g").as_float(0);
+	backgroundColor.b = color_node.attribute("b").as_float(0);
+	backgroundColor.a = color_node.attribute("a").as_float(0);
 
 	// load flags
 	Uint32 flags = SDL_RENDERER_ACCELERATED;
@@ -49,53 +55,9 @@ bool Render::RenderImpl::LoadConfig(pugi::xml_node& config_node)
 		flags |= SDL_RENDERER_PRESENTVSYNC;
 		Logger::Console_log(LogLevel::LOG_INFO, "Using vsync");
 	}
-	SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+	//SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
 	Logger::Console_log(LogLevel::LOG_INFO, "Create SDL rendering context");
-	//renderer = SDL_CreateRenderer(mPartInst->mApp.GetImplementation<Window,Window::WindowImpl>()->GetSDLWindow(), -1, flags);
-	//if(!renderer)
-	//{
-	//	ret = false;
-	//}
-
-	maincontext = SDL_GL_CreateContext(mPartInst->mApp.GetImplementation<Window, Window::WindowImpl>()->GetSDLWindow());
-	if (maincontext == NULL)
-	{
-		Logger::Console_log(LogLevel::LOG_ERROR, "Could not create OpenGL context");
-		ret = false;
-	}
-	else
-	{
-		SDL_GL_MakeCurrent(mPartInst->mApp.GetImplementation<Window, Window::WindowImpl>()->GetSDLWindow(), maincontext);
-		Logger::Console_log(LogLevel::LOG_INFO, "OpenGL loaded");
-		gladLoadGLLoader(SDL_GL_GetProcAddress);
-
-		SDL_GL_SetSwapInterval(1);
-
-		std::stringstream ss;
-		ss << "Vendor:";
-		ss << glGetString(GL_VENDOR);
-		Logger::Console_log(LogLevel::LOG_INFO, ss.str().c_str());
-		ss.str("");
-		ss << "Renderer:";
-		ss << glGetString(GL_RENDERER);
-		Logger::Console_log(LogLevel::LOG_INFO, ss.str().c_str());
-		ss.str("");
-		ss << "Version:";
-		ss << glGetString(GL_VERSION);
-		Logger::Console_log(LogLevel::LOG_INFO, ss.str().c_str());
-
-
-		// Disable depth test and face culling.
-		glDisable(GL_DEPTH_TEST);
-		glDisable(GL_CULL_FACE);
-		
-		int win_x, win_y;
-		mPartInst->mApp.GetModule<Window>().GetWindowSize(win_x,win_y);
-
-		glViewport(0, 0, win_x, win_y);
-		glClearColor(0.0f, 0.5f, 1.0f, 0.0f);
-	}
 
 	return ret;
 }
@@ -143,6 +105,15 @@ bool Render::RenderImpl::Init()
 	int win_x, win_y;
 	mPartInst->mApp.GetModule<Window>().GetWindowSize(win_x, win_y);
 
+	InitRenderer(*mPartInst->mApp.GetImplementation<Window, Window::WindowImpl>(), mPartInst->mApp.GetModule<Window>());
+
+	//if (!LoadShaders())
+	//{
+	//	ret = false;
+	//}
+
+	//CreateBuffers();
+
 	//mOrthoProjection = glm::ortho(0.0f, win_x,win_y, 0.0f, -1000.0f,1000.0f);
 	return ret;
 }
@@ -152,12 +123,42 @@ bool Render::RenderImpl::Loop(float dt)
 	bool ret = true;
 	//SDL_RenderClear(renderer);
 
-	SDL_GL_SwapWindow(mPartInst->mApp.GetImplementation<Window,Window::WindowImpl>()->GetSDLWindow());
+	mDrawCallsLastFrame += dt/1000;
+	if (mDrawCallsLastFrame > 1.0f)
+		mDrawCallsLastFrame = 0;
 
-	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
+	//BLOCK
+	//glClearColor(mDrawCallsLastFrame, 0.3f, 0.3f, 1.0f);
+	//glClear(GL_COLOR_BUFFER_BIT);
+	//glUseProgram(shaderProgram);
 
-	mDrawCallsLastFrame = 0;
+	//mDrawCallsLastFrame = 0;
+
+
+	//for (int i = 0; i < 6; i++)
+	//{
+	//	modelV[i].modelMat = glm::translate(modelV[i].modelMat, glm::vec3(0.01f));
+	//}
+
+	//std::size_t vec4Size = sizeof(glm::vec4);
+	//glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	////ADD GEOMETRY DATA TO THE BUFFER
+	//glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 5 * 6 * (vec4Size * 4), &modelV[0], GL_STATIC_DRAW);
+
+	glm::mat4x4 lViewProjection = mPartInst->mApp.GetImplementation<Camera, Camera::CameraImpl>()->GetOrthoMatrix() * mPartInst->mApp.GetImplementation<Camera, Camera::CameraImpl>()->GetViewMatrix();
+
+	glm::mat4x4 mOrthoMatrix = glm::ortho(-200.0f, 200.0f, 200.0f, -200.0f, -10.0f, 10.0f);
+	glm::mat4x4 mViewMatrix = glm::lookAt(glm::vec3(0, 0, 1), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+	mViewMatrix = glm::inverse(mViewMatrix);
+
+	lViewProjection = mOrthoMatrix * mViewMatrix;
+
+	SetViewProjectionMatrix(lViewProjection);
+	SetDefaultShader();
+	DrawSprite(0, { 0,0,100,100 }, {10,10,10,10});
+	DrawSprite(0, { -100,-100,15,15 }, {10,10,10,10});
+
+	UpdateRender();
 
 	//for (int i = 0; i < RenderQueue::RENDER_MAX; i++)
 	//{
@@ -186,7 +187,7 @@ void Render::RenderImpl::RenderMapLayer(layer* layer)
 		return;
 	}
 
-	BlitLayer* it = new BlitLayer(lTex,layer);
+	BlitLayer* it = new BlitLayer(layer);
 	it->depth = layer->depth;
 	allQueue.push(it);
 }
@@ -199,16 +200,10 @@ void Render::RenderImpl::RenderParticleEmitter(ParticleEmitter* layer, RenderQue
 		return;
 	}
 
-	BlitParticles* it = new BlitParticles(lTex,layer);
+	BlitParticles* it = new BlitParticles(layer);
 	it->depth = layer->depth;
 	GetQueue(aRenderQueue)->push(it);
 }
-
-void Render::RenderImpl::SetSDL_GLContext(SDL_GLContext* aContext)
-{
-	maincontext = *aContext;
-}
-
 
 void Render::RenderImpl::RenderMapBackground(TextureID aTexID, int depth, bool repeat_y, float parallax_factor_x, float parallax_factor_y)
 {
@@ -218,7 +213,7 @@ void Render::RenderImpl::RenderMapBackground(TextureID aTexID, int depth, bool r
 		return;
 	}
 
-	BlitBackground* it = new BlitBackground(lTex,depth,repeat_y, parallax_factor_x, parallax_factor_y);
+	BlitBackground* it = new BlitBackground(depth,repeat_y, parallax_factor_x, parallax_factor_y);
 	//order the elements
 	allQueue.push(it);
 }
@@ -227,10 +222,12 @@ bool Render::RenderImpl::CleanUp()
 {
 	bool ret = true;
 
-	SDL_DestroyRenderer(renderer);
-	SDL_GL_DeleteContext(maincontext);
-
+	//SDL_DestroyRenderer(renderer);
 	//SDL_QuitSubSystem(SDL_INIT_VIDEO);
+	
+	//delete vertices;
+	CleanUp();
+
 	return ret;
 }
 
@@ -359,7 +356,7 @@ void Render::RenderTrail(RXPoint* point_array, int amount, RenderQueue aQueue,bo
 	lImpl->GetQueue(aQueue)->push(it);
 }
 
-void BlitTexture::Blit(Render& aRender, Camera& camera, Window& aWindow)
+void BlitTexture::Blit(Render::RenderImpl& aRender, Camera& camera, Window& aWindow)
 {
 	float scale = aWindow.GetScale();
 
@@ -385,7 +382,7 @@ void BlitTexture::Blit(Render& aRender, Camera& camera, Window& aWindow)
 	if (!camera.isOnScreen(lRect, false))
 		return;
 
-	aRender.CountDrawCall();
+	//aRender.CountDrawCall();
 	if (SDL_RenderCopyEx(aRender.GetSDL_Renderer(), tex, &on_image, &rect, angle, &p, SDL_FLIP_NONE) != 0)
 	{
 		std::string errstr = "Cannot blit to screen. SDL_RenderCopy error: ";
@@ -395,7 +392,7 @@ void BlitTexture::Blit(Render& aRender, Camera& camera, Window& aWindow)
 	}
 }
 
-void BlitLayer::Blit(Render& aRender, Camera& camera, Window& aWindow)
+void BlitLayer::Blit(Render::RenderImpl& aRender, Camera& camera, Window& aWindow)
 {
 	float scale = aWindow.GetScale();
 
@@ -426,8 +423,9 @@ void BlitLayer::Blit(Render& aRender, Camera& camera, Window& aWindow)
 			if (!camera.isOnScreen(lRect, false))
 				continue;
 
-			aRender.CountDrawCall();
-			if (SDL_RenderCopyEx(aRender.GetSDL_Renderer(), tex, &GetImageRectFromId(mLayer->tileset_of_layer, mLayer->data[i]), &on_scn, 0, NULL, SDL_FLIP_NONE) != 0)
+			//aRender.CountDrawCall();
+			//if (SDL_RenderCopyEx(aRender.GetSDL_Renderer(), tex, &GetImageRectFromId(mLayer->tileset_of_layer, mLayer->data[i]), &on_scn, 0, NULL, SDL_FLIP_NONE) != 0)
+			if (aRender.DrawSprite(t->texture, on_scn, &GetImageRectFromId(mLayer->tileset_of_layer, mLayer->data[i])))
 			{
 				std::string errstr = "Cannot blit to screen. SDL_RenderCopy error: ";
 				errstr += SDL_GetError();
@@ -450,7 +448,7 @@ SDL_Rect BlitLayer::GetImageRectFromId(tileset* t, int id)
 	return rect;
 }
 
-void BlitBackground::Blit(Render& aRender, Camera& camera, Window& aWindow)
+void BlitBackground::Blit(Render::RenderImpl& aRender, Camera& camera, Window& aWindow)
 {
 	int back_w, back_h;
 
@@ -519,7 +517,7 @@ void BlitBackground::Blit(Render& aRender, Camera& camera, Window& aWindow)
 			rect.w *= scale;
 			rect.h *= scale;
 
-			aRender.CountDrawCall();
+			//aRender.CountDrawCall();
 			if (SDL_RenderCopyEx(aRender.GetSDL_Renderer(), tex, NULL, &rect, 0, NULL, SDL_FLIP_NONE) != 0)
 			{
 				std::string errstr = "Cannot blit to screen. SDL_RenderCopy error: ";
@@ -535,7 +533,7 @@ void BlitBackground::Blit(Render& aRender, Camera& camera, Window& aWindow)
 	}
 }
 
-void BlitRect::Blit(Render& aRender, Camera& camera, Window& aWindow)
+void BlitRect::Blit(Render::RenderImpl& aRender, Camera& camera, Window& aWindow)
 {
 	float scale = aWindow.GetScale();
 
@@ -563,7 +561,7 @@ void BlitRect::Blit(Render& aRender, Camera& camera, Window& aWindow)
 	SDL_SetRenderDrawColor(aRender.GetSDL_Renderer(), color.r, color.g, color.b, color.a);
 	//SDL_SetRenderDrawColor(lRender->renderer, color.r, color.g, color.b, 255);
 
-	aRender.CountDrawCall();
+	//aRender.CountDrawCall();
 	int result = (filled) ? SDL_RenderFillRect(aRender.GetSDL_Renderer(), &temp) : SDL_RenderDrawRect(aRender.GetSDL_Renderer(), &temp);
 
 	if (result != 0)
@@ -574,7 +572,7 @@ void BlitRect::Blit(Render& aRender, Camera& camera, Window& aWindow)
 	}
 }
 
-void BlitTrail::Blit(Render& aRender, Camera& camera, Window& aWindow)
+void BlitTrail::Blit(Render::RenderImpl& aRender, Camera& camera, Window& aWindow)
 {
 	float scale = aWindow.GetScale();
 
@@ -601,7 +599,7 @@ void BlitTrail::Blit(Render& aRender, Camera& camera, Window& aWindow)
 	}
 }
 
-void BlitParticles::Blit(Render& aRender, Camera& camera, Window& aWindow)
+void BlitParticles::Blit(Render::RenderImpl& aRender, Camera& camera, Window& aWindow)
 {
 	float scale = aWindow.GetScale();
 	
@@ -629,7 +627,7 @@ void BlitParticles::Blit(Render& aRender, Camera& camera, Window& aWindow)
 			if (!camera.isOnScreen(lRect, false))
 				continue;
 
-			aRender.CountDrawCall();
+			//aRender.CountDrawCall();
 			if (SDL_RenderCopyEx(aRender.GetSDL_Renderer(), tex, &lRectInText, &rect, lEmmitter->particles[i]->angle, NULL, SDL_FLIP_NONE) != 0)
 			{
 				std::string errstr = "Cannot blit to screen. SDL_RenderCopy error: ";
@@ -640,18 +638,7 @@ void BlitParticles::Blit(Render& aRender, Camera& camera, Window& aWindow)
 	}
 }
 
-SDL_Renderer* Render::GetSDL_Renderer()
-{
-	RenderImpl* lImpl = dynamic_cast<RenderImpl*>(mPartFuncts);
-	if (!lImpl)
-	{
-		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
-		return nullptr;
-	}
-	return lImpl->renderer;
-}
-
-void BlitItemText::Blit(Render& aRender, Camera& camera, Window& aWindow)
+void BlitItemText::Blit(Render::RenderImpl& aRender, Camera& camera, Window& aWindow)
 {
 	// variable to store token obtained from the original
 	int length_so_far = 0;
@@ -682,7 +669,7 @@ void BlitItemText::Blit(Render& aRender, Camera& camera, Window& aWindow)
 			if (!camera.isOnScreen(lRect,false))
 				continue;
 
-			aRender.CountDrawCall();
+			//aRender.CountDrawCall();
 			if (SDL_RenderCopyEx(aRender.GetSDL_Renderer(), lFontTexture, mappedRect, &on_screen, 0, NULL, SDL_FLIP_NONE) != 0)
 			{
 				std::string errstr = "Cannot blit to screen. SDL_RenderCopy error: ";

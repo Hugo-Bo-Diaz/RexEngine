@@ -4,10 +4,13 @@
 #include "PartImpl.h"
 #include "../include/Modules/Camera.h"
 #include "EngineElements/GameObject.h"
+#include <glm/include/glm/glm.hpp>
 
 class Camera::CameraImpl : public Part::Part_Impl
 {
 public:
+	friend class Camera;
+
 	Camera::CameraImpl(Camera* aCamera):mPartInst(aCamera){
 		shaking.Pause();
 		shaking.Reset();
@@ -18,19 +21,24 @@ public:
 		mPartInst = aCamera;
 	}
 
+	glm::mat4x4 GetViewMatrix() { return mViewMatrix; }
+	glm::mat4x4 GetOrthoMatrix() { return mOrthoMatrix; }
+
 protected:
 	bool Init();
 	bool Loop(float dt);
 
 private:
 	Camera* mPartInst;
-	friend class Camera;
 
 	float position_x;
 	float position_y;
 
 	int width;
 	int height;
+
+	glm::mat4x4 mViewMatrix;
+	glm::mat4x4 mOrthoMatrix;
 
 	bool is_shaking = false;
 	Timer shaking;
