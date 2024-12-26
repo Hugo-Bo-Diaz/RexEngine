@@ -4,6 +4,8 @@
 #include <vector>
 #include "RXRect.h"
 
+typedef unsigned int RexTextureID;
+
 #define DLL_EXPORT __declspec(dllexport)
 
 #define MAXFRAMES 20
@@ -28,7 +30,7 @@ public:
 	Animation() {};
 
 	//this constructor allows for the direct assignation of a texture
-	Animation(TextureID aTex) :mTexture(aTex) {};
+	Animation(RexTextureID aTex) :mTexture(aTex) {};
 	
 	//add frames of animation using this function
 	void AddFrame(const RXRect& frame);
@@ -52,7 +54,7 @@ public:
 	int GetCurrentFrameNumber();
 
 	//the texture that will be used on the renderer
-	TextureID mTexture = -1;
+	RexTextureID mTexture = -1;
 };
 
 #endif

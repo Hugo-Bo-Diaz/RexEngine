@@ -2,8 +2,6 @@
 #define RENDER__H
 
 #include"PartsDef.h"
-#include "Textures.h"
-#include "Text.h"
 #include "SceneController.h"
 
 #include "RXRect.h"
@@ -11,6 +9,10 @@
 #include "RXPoint.h"
 #include "Part.h"
 #include "EngineElements/Animation.h"
+#include "EngineElements/ParticleEmitter.h"
+
+#define XMLFONTEXTENSION "xml"
+#define TTFFONTEXTENSION "ttf"
 
 enum RenderQueue
 {
@@ -21,36 +23,24 @@ enum RenderQueue
 	RENDER_MAX = 3
 };
 
-
-
-
-class Comparer
-{
-public:
-	bool operator() (BlitItem* itemA, BlitItem* itemB)
-	{
-		return itemB->depth > itemA->depth;
-	}
-};
-
 typedef unsigned int RexTextureID;
+typedef unsigned int RexFontID;
 typedef unsigned int RexShaderID;
 
-struct SDL_Renderer;
 
 //module that handles graphic processing
 class DLL_EXPORT Render : public Part
 {
 public:
-	Render(EngineAPI& aAPI);
+	Render(EngineAPI& aAPI, const char* aRenderType);
 
 	//renders a texture
-	void RenderTexture(TextureID aTexID, int x, int y,const RXRect& rect_on_image, int aDepth, RenderQueue aQueue = RenderQueue::RENDER_GAME, float angle = 0, float aScale_x = 1.0f, float aScale_y = 1.0f, float parallax_factor_x = 1, float parallax_factor_y = 1, int center_x = -1,int center_y = -1);
+	void RenderTexture(RexTextureID aTexID, int x, int y,const RXRect& rect_on_image, int aDepth, RenderQueue aQueue = RenderQueue::RENDER_GAME, float angle = 0, float aScale_x = 1.0f, float aScale_y = 1.0f, float parallax_factor_x = 1, float parallax_factor_y = 1, int center_x = -1,int center_y = -1);
 	//renders an animation
 	void RenderAnimation(Animation& aAnimation, int x, int y, int aDepth = 0, RenderQueue aQueue = RenderQueue::RENDER_GAME, float angle = 0, float aScale_x = 1.0f, float aScale_y = 1.0f, float parallax_factor_x = 1, float parallax_factor_y = 1, int center_x = -1, int center_y = -1);
 
 	//renders a text
-	void RenderText(const char* text, FontID font, int x, int y, int depth, const RXColor& aColor,RenderQueue aQueue,bool ignore_camera = false);
+	void RenderText(const char* text, RexFontID font, int x, int y, int depth, const RXColor& aColor,RenderQueue aQueue,bool ignore_camera = false);
 	//renders a rectangle
 	void RenderRect(const RXRect& area, const RXColor& aColor, bool filled,RenderQueue aQueue, int depth, bool ignore_camera = false);
 	//renders a trail of points
@@ -64,22 +54,27 @@ public:
 
 
 	//loads a texutre into memory and returns a handle in the parameter
-	bool LoadTexture(const char* aPath, RexTextureID& aResultID) { return false; };
+	bool LoadTexture(const char* aPath, RexTextureID& aResultID);
 	//frees a texture from memory
-	bool DestroyTexture(RexTextureID aResultID) { return false; };
+	bool DestroyTexture(RexTextureID aResultID);
 
 	//loads a shader into memory and returns a handle in the parameter
-	bool LoadShader(const char* aPathVertex, const char* aPathFragment, RexShaderID& aShader) { return false; };
+	bool LoadShader(const char* aPathVertex, const char* aPathFragment, RexShaderID& aShader);
 	//sets the shader to be used
-	bool SetShader(RexShaderID aShader) { return false; };
+	bool SetShader(RexShaderID aShader);
 	//sets the shader to the default render shader
-	void SetDefaultShader() {};
+	void SetDefaultShader();
 	//Destroys the shader referenced
-	bool DestroyTexture(RexShaderID aResultID) { return false; };
+	bool DestroyShader(RexShaderID aResultID);
 
 	//
+	bool LoadFont(const char* aPath, const RXColor& aColor, int size, RexFontID& aFontID);
+	void GetTextSize(RexFontID aFontID, const char* string, int& w, int& y);
 
-	bool UpdateRender() { return true; };
+	//creates a particle emitter and adds it to the engine
+	ParticleEmitter* AddParticleEmitter(particle_preset* particle_preset, float x, float y, float lifespan = -1, int depth = 0);
+	//removes a particle emitter and deletes its memory
+	void RemoveParticleEmitter(ParticleEmitter* _to_delete);
 
 
 	class RenderImpl;
@@ -124,5 +119,15 @@ public:
 		return rhs.depth > depth;
 	}
 };
+
+class Comparer
+{
+public:
+	bool operator() (BlitItem* itemA, BlitItem* itemB)
+	{
+		return itemB->depth > itemA->depth;
+	}
+};
+
 
 #endif // !RENDER__H

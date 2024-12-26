@@ -1,16 +1,12 @@
 #include "Application.h"
 #include "Modules/Input.h"
 #include "Modules/Window.h"
-#include "Modules/Textures.h"
 #include "Modules/Render.h"
 #include "Modules/SceneController.h"
-#include "Modules/ObjectManager.h"
 #include "Utils/Logger.h"
 #include "Modules/Audio.h"
 #include "Modules/Camera.h"
-#include "Modules/Particles.h"
 #include "Modules/Gui.h"
-#include "Modules/Text.h"
 #include "Modules/ProgressTracker.h"
 #include "Modules/Debug.h"
 
@@ -58,19 +54,8 @@ Application::Application(const char* aConfigFile, bool& aSuccesful)
 	signal(SIGILL, ExceptionHandler);
 	signal(SIGSEGV, ExceptionHandler);
 
-	parts.push_back(new Input(*mAPI));
-	parts.push_back(new Window(*mAPI));
-	parts.push_back(new ObjectManager(*mAPI));
-	parts.push_back(new UserInterface(*mAPI));
-	parts.push_back(new SceneController(*mAPI));
-	parts.push_back(new Camera(*mAPI));
-	parts.push_back(new Particles(*mAPI));
-	parts.push_back(new Audio(*mAPI));
-	parts.push_back(new Render(*mAPI));
-	//parts.push_back(new Textures(*mAPI));
-	parts.push_back(new Text(*mAPI));
-	parts.push_back(new ProgressTracker(*mAPI));
-	parts.push_back(new Debug(*mAPI));
+	LoadConfig(mConfigFile.c_str());
+
 }
 
 
@@ -111,14 +96,8 @@ void Application::Run()
 	}
 }
 
-
-
 bool Application::Init()
 {
-	Logger::Console_log(LogLevel::LOG_INFO, "Starting engine");
-
-	LoadConfig(mConfigFile.c_str());
-
 	Logger::Console_log(LogLevel::LOG_INFO, "Initializing engine");
 	for (std::list<Part*>::iterator it = parts.begin(); it != parts.end(); it++)
 	{
@@ -201,6 +180,8 @@ bool Application::CleanUp()
 
 void Application::LoadConfig(const char* filename)
 {
+	Logger::Console_log(LogLevel::LOG_INFO, "Loading the configuration file");
+
 	pugi::xml_document	config_file;
 	pugi::xml_node config_node;
 	pugi::xml_parse_result result = config_file.load_file(filename);
@@ -227,6 +208,19 @@ void Application::LoadConfig(const char* filename)
 		Logger::Console_log(LogLevel::LOG_INFO, lStr.str().c_str());
 		config_node = config_file.child("config");
 	}
+
+	std::string lChosenRenderer = config_node.attribute("renderer").as_string();
+
+	parts.push_back(new Input(*mAPI));
+	parts.push_back(new Window(*mAPI));
+	//parts.push_back(new ObjectManager(*mAPI));
+	parts.push_back(new UserInterface(*mAPI));
+	parts.push_back(new SceneController(*mAPI));
+	parts.push_back(new Camera(*mAPI));
+	parts.push_back(new Audio(*mAPI));
+	parts.push_back(new Render(*mAPI, lChosenRenderer.c_str()));
+	parts.push_back(new ProgressTracker(*mAPI));
+	parts.push_back(new Debug(*mAPI));
 
 	for (std::list<Part*>::iterator it = parts.begin(); it != parts.end(); it++)
 	{

@@ -5,7 +5,6 @@
 #include "RXRect.h"
 #include <typeindex>
 
-class ObjectManager;
 class SceneController;
 
 /*this is the main class that should be INHERITED to create custom behaviours of objects
@@ -51,7 +50,6 @@ public:
 		return (dynamic_cast<T*>(this) != NULL);
 	}
 
-	friend class ObjectManager;
 	friend class SceneController;
 protected:
 	EngineAPI* Engine = nullptr;

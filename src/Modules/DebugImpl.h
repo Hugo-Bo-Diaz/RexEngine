@@ -41,6 +41,8 @@ private:
 	ULARGE_INTEGER lastCPU, lastSysCPU, lastUserCPU;
 	int numProcessors;
 	HANDLE self;
+
+	std::string mDebugFontPath;
 };
 
 

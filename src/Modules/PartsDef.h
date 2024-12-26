@@ -13,14 +13,12 @@ class Part;
 class Input;
 class Window;
 class Render;
-class Textures;
 class SceneController;
-class ObjectManager;
+//class ObjectManager;
 class Camera;
 class Audio;
 class Particles;
 class UserInterface;
-class Text;
 class ProgressTracker;
 class Debug;
 #endif // !PARTSDEF__H

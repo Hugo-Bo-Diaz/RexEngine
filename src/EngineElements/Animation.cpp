@@ -1,6 +1,4 @@
 #include "..\..\include\EngineElements\Animation.h"
-#include "..\..\include\EngineElements\Animation.h"
-#include "..\..\include\EngineElements\Animation.h"
 #include "EngineElements/Animation.h"
 
 void Animation::AddFrame(const RXRect& frame)

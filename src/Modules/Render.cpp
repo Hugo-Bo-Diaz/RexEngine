@@ -3,41 +3,42 @@
 #include "Application.h"
 #include "Modules/Window.h"
 #include "Modules/Camera.h"
-#include "Modules/Particles.h"
 #include "EngineElements/ParticleEmitter.h"
-#include "Modules/Text.h"
 #include "Utils/Logger.h"
 
 #include "RenderImpl.h"
-#include "TexturesImpl.h"
 #include "CameraImpl.h"
-#include "TextImpl.h"
 #include "WindowImpl.h"
 #include "EngineAPI.h"
 
-#include "../Utils/Renderer/OpenGLRenderer.h"
+#include "Renderers/OpenGLRenderer.h"
+#include "Renderers/SDLRenderer.h"
 
 #include <glm/include/glm/gtc/type_ptr.hpp>
 
-Render::Render(EngineAPI& aAPI) :Part("Render",aAPI)
+Render::Render(EngineAPI& aAPI, const char* aRenderType) :Part("Render",aAPI)
 { 
-	mPartFuncts = new OpenGL2DRenderer(this);
-	SDL_GL_LoadLibrary(NULL);
-
-	// Request an OpenGL 4.5 context (should be core)
-	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5);
-	// Also request a depth buffer
-	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-
+	if (strcmp("SDL", aRenderType) == 0)
+	{
+		mPartFuncts = new SDLRenderer(this);
+	}
+	else if (strcmp("OpenGL", aRenderType) == 0)
+	{
+		mPartFuncts = new OpenGL2DRenderer(this);
+	}
+	else
+	{
+		Logger::Console_log(LogLevel::LOG_ERROR,"Could not find the Render type, please check the configuration file");
+		mPartFuncts = nullptr;
+	}
 }
 
 #pragma region IMPLEMENTATION
 
 bool Render::RenderImpl::LoadConfig(pugi::xml_node& config_node)
 {
+	pugi::xml_node& lRenderType = config_node.child("RenderEngine");
+
 	bool ret = true;
 
 	pugi::xml_node& color_node = config_node.child("bkg_color");
@@ -97,24 +98,23 @@ std::priority_queue<BlitItem*, std::vector<BlitItem*>, Comparer>* Render::Render
 
 }
 
+RexFont* Render::RenderImpl::GetFont(RexFontID aFontID)
+{
+	for (std::vector<RexFont*>::iterator it = mFonts.begin(); it != mFonts.end(); it++)
+	{
+		if ((*it)->mFontID == aFontID)
+		{
+			return ((*it));
+		}
+	}
+	return nullptr;
+}
+
 bool Render::RenderImpl::Init()
 {
 	bool ret = true;
+	ret = InitRenderer(*mPartInst->mApp.GetImplementation<Window, Window::WindowImpl>(), mPartInst->mApp.GetModule<Window>());
 
-
-	int win_x, win_y;
-	mPartInst->mApp.GetModule<Window>().GetWindowSize(win_x, win_y);
-
-	InitRenderer(*mPartInst->mApp.GetImplementation<Window, Window::WindowImpl>(), mPartInst->mApp.GetModule<Window>());
-
-	//if (!LoadShaders())
-	//{
-	//	ret = false;
-	//}
-
-	//CreateBuffers();
-
-	//mOrthoProjection = glm::ortho(0.0f, win_x,win_y, 0.0f, -1000.0f,1000.0f);
 	return ret;
 }
 
@@ -123,70 +123,37 @@ bool Render::RenderImpl::Loop(float dt)
 	bool ret = true;
 	//SDL_RenderClear(renderer);
 
+	UpdateParticles(dt);
+
 	mDrawCallsLastFrame += dt/1000;
 	if (mDrawCallsLastFrame > 1.0f)
 		mDrawCallsLastFrame = 0;
 
-	//BLOCK
-	//glClearColor(mDrawCallsLastFrame, 0.3f, 0.3f, 1.0f);
-	//glClear(GL_COLOR_BUFFER_BIT);
-	//glUseProgram(shaderProgram);
-
-	//mDrawCallsLastFrame = 0;
-
-
-	//for (int i = 0; i < 6; i++)
-	//{
-	//	modelV[i].modelMat = glm::translate(modelV[i].modelMat, glm::vec3(0.01f));
-	//}
-
-	//std::size_t vec4Size = sizeof(glm::vec4);
-	//glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	////ADD GEOMETRY DATA TO THE BUFFER
-	//glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 5 * 6 * (vec4Size * 4), &modelV[0], GL_STATIC_DRAW);
-
 	glm::mat4x4 lViewProjection = mPartInst->mApp.GetImplementation<Camera, Camera::CameraImpl>()->GetOrthoMatrix() * mPartInst->mApp.GetImplementation<Camera, Camera::CameraImpl>()->GetViewMatrix();
-
-	glm::mat4x4 mOrthoMatrix = glm::ortho(-200.0f, 200.0f, 200.0f, -200.0f, -10.0f, 10.0f);
-	glm::mat4x4 mViewMatrix = glm::lookAt(glm::vec3(0, 0, 1), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
-	mViewMatrix = glm::inverse(mViewMatrix);
-
-	lViewProjection = mOrthoMatrix * mViewMatrix;
 
 	SetViewProjectionMatrix(lViewProjection);
 	SetDefaultShader();
-	DrawSprite(0, { 0,0,100,100 }, {10,10,10,10});
-	DrawSprite(0, { -100,-100,15,15 }, {10,10,10,10});
 
-	UpdateRender();
+	for (int i = 0; i < RenderQueue::RENDER_MAX; i++)
+	{
+		std::priority_queue<BlitItem*, std::vector<BlitItem*>, Comparer>* lQueue = GetQueue((RenderQueue)i);
+		while (!lQueue->empty())
+		{
+			BlitItem* lNextItem = lQueue->top();
+			lQueue->pop();
 
-	//for (int i = 0; i < RenderQueue::RENDER_MAX; i++)
-	//{
-	//	std::priority_queue<BlitItem*, std::vector<BlitItem*>, Comparer>* lQueue = GetQueue((RenderQueue)i);
-	//	while (!lQueue->empty())
-	//	{
-	//		BlitItem* lNextItem = lQueue->top();
-	//		lQueue->pop();
+			lNextItem->Blit(*this, mPartInst->mApp.GetModule<Camera>(), mPartInst->mApp.GetModule<Window>());
+			delete lNextItem;
+		}
+	}
 
-	//		lNextItem->Blit(*mPartInst, mPartInst->mApp.GetModule<Camera>(), mPartInst->mApp.GetModule<Window>());
-	//		delete lNextItem;
-	//	}
-	//}
-
-	//SDL_SetRenderDrawColor(renderer, background.r, background.g, background.g, background.a);
-	//SDL_RenderPresent(renderer);
+	UpdateRender(dt);
 	return ret;
 }
 
 
 void Render::RenderImpl::RenderMapLayer(layer* layer)
 {
-	SDL_Texture* lTex = mPartInst->mApp.GetImplementation<Textures, Textures::TexturesImpl>()->Get_Texture(layer->tileset_of_layer->texture);
-	if (lTex == nullptr)
-	{
-		return;
-	}
-
 	BlitLayer* it = new BlitLayer(layer);
 	it->depth = layer->depth;
 	allQueue.push(it);
@@ -194,41 +161,28 @@ void Render::RenderImpl::RenderMapLayer(layer* layer)
 
 void Render::RenderImpl::RenderParticleEmitter(ParticleEmitter* layer, RenderQueue aRenderQueue)
 {
-	SDL_Texture* lTex = mPartInst->mApp.GetImplementation<Textures, Textures::TexturesImpl>()->Get_Texture(layer->preset_for_emitter->texture_name);
-	if (lTex == nullptr)
-	{
-		return;
-	}
-
 	BlitParticles* it = new BlitParticles(layer);
 	it->depth = layer->depth;
 	GetQueue(aRenderQueue)->push(it);
 }
 
-void Render::RenderImpl::RenderMapBackground(TextureID aTexID, int depth, bool repeat_y, float parallax_factor_x, float parallax_factor_y)
+RexTexture* Render::RenderImpl::GetTexture(RexTextureID aTexture)
 {
-	SDL_Texture* lTex = mPartInst->mApp.GetImplementation<Textures, Textures::TexturesImpl>()->Get_Texture(aTexID);
-	if (lTex == nullptr)
+	for (std::vector<RexTexture*>::iterator it = mTextures.begin(); it != mTextures.end(); it++)
 	{
-		return;
+		if ((*it)->mID == aTexture)
+		{
+			return ((*it));
+		}
 	}
-
-	BlitBackground* it = new BlitBackground(depth,repeat_y, parallax_factor_x, parallax_factor_y);
-	//order the elements
-	allQueue.push(it);
+	return nullptr;
 }
 
-bool Render::RenderImpl::CleanUp()
+void Render::RenderImpl::RenderMapBackground(RexTextureID aTexID, int depth, bool repeat_y, float parallax_factor_x, float parallax_factor_y)
 {
-	bool ret = true;
-
-	//SDL_DestroyRenderer(renderer);
-	//SDL_QuitSubSystem(SDL_INIT_VIDEO);
-	
-	//delete vertices;
-	CleanUp();
-
-	return ret;
+	BlitBackground* it = new BlitBackground(aTexID, depth, repeat_y, parallax_factor_x, parallax_factor_y);
+	//order the elements
+	allQueue.push(it);
 }
 
 #pragma endregion
@@ -255,7 +209,106 @@ void Render::CountDrawCall()
 	lImpl->mDrawCallsLastFrame++;
 }
 
-void Render::RenderTexture(TextureID aTexID, int x, int y,const RXRect& rect_on_image, int depth, RenderQueue aQueue, float angle, float aScale_x, float aScale_y, float parallax_factor_x, float parallax_factor_y, int center_x,int center_y)
+bool Render::LoadTexture(const char* aPath, RexTextureID& aResultID)
+{
+	RenderImpl* lImpl = dynamic_cast<RenderImpl*>(mPartFuncts);
+	if (!lImpl)
+	{
+		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
+	}
+
+	return lImpl->LoadTexture(aPath, aResultID);
+}
+
+bool Render::DestroyTexture(RexTextureID aResultID)
+{
+	RenderImpl* lImpl = dynamic_cast<RenderImpl*>(mPartFuncts);
+	if (!lImpl)
+	{
+		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
+	}
+
+	return lImpl->DestroyTexture(aResultID);
+}
+
+bool Render::LoadShader(const char* aPathVertex, const char* aPathFragment, RexShaderID& aShader)
+{
+	RenderImpl* lImpl = dynamic_cast<RenderImpl*>(mPartFuncts);
+	if (!lImpl)
+	{
+		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
+	}
+
+	return lImpl->LoadShader(aPathVertex,aPathFragment, aShader);
+}
+
+bool Render::SetShader(RexShaderID aShader)
+{
+	RenderImpl* lImpl = dynamic_cast<RenderImpl*>(mPartFuncts);
+	if (!lImpl)
+	{
+		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
+	}
+
+	return lImpl->SetShader(aShader);
+}
+
+void Render::SetDefaultShader()
+{
+	RenderImpl* lImpl = dynamic_cast<RenderImpl*>(mPartFuncts);
+	if (!lImpl)
+	{
+		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
+	}
+
+	lImpl->SetDefaultShader();
+}
+
+bool Render::DestroyShader(RexShaderID aResultID)
+{
+	return false;
+}
+
+bool Render::LoadFont(const char* aPath, const RXColor& aColor, int size, RexFontID& aFontID)
+{
+	RenderImpl* lImpl = dynamic_cast<RenderImpl*>(mPartFuncts);
+	if (!lImpl)
+	{
+		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
+		return 0;
+	}
+
+	for (std::vector<RexFont*>::iterator it = lImpl->mFonts.begin(); it != lImpl->mFonts.end(); it++)
+	{
+		if (std::strcmp((*it)->name.c_str(), aPath) == 0 && (*it)->size == size)
+		{
+			aFontID = (*it)->mFontID;
+			return true;
+		}
+	}
+
+	std::string lFullPath = aPath;
+	std::string lExtension = lFullPath.substr(lFullPath.find_last_of(".") + 1).c_str();
+
+	bool lResult = false;
+
+	if (strcmp(lExtension.c_str(), XMLFONTEXTENSION) == 0) {
+		lResult = lImpl->LoadFontXML(aPath, aColor, size, aFontID);
+	}
+	else if (strcmp(lExtension.c_str(), TTFFONTEXTENSION) == 0) {
+		lResult = lImpl->LoadFontTTF(aPath, aColor, size, aFontID);
+	}
+	else
+	{
+		std::stringstream lStream;
+		lStream << "Could not load font from :" << aPath << " - incorrect format";
+		Logger::Console_log(LogLevel::LOG_ERROR, lStream.str().c_str());
+	}
+
+	return lResult;
+}
+
+void Render::GetTextSize(RexFontID aFontID, const char* string, int& w, int& y)
 {
 	RenderImpl* lImpl = dynamic_cast<RenderImpl*>(mPartFuncts);
 	if (!lImpl)
@@ -264,13 +317,36 @@ void Render::RenderTexture(TextureID aTexID, int x, int y,const RXRect& rect_on_
 		return;
 	}
 
-	SDL_Texture* lTex = mApp.GetImplementation<Textures,Textures::TexturesImpl>()->Get_Texture(aTexID);
-	if (lTex == nullptr)
+	RexFont* lFont = lImpl->GetFont(aFontID);
+
+	if (lFont == nullptr)
+		return;
+
+	w = 0;
+	y = 0;
+	for (size_t i = 0; string[i] != '\0'; i++)
 	{
+		RXRect* lMap = lFont->lMapping[string[i]];
+		if (lMap == nullptr)
+		{
+			continue;
+		}
+
+		y = std::max(lMap->h, y);
+		w += lMap->w;
+	}
+}
+
+void Render::RenderTexture(RexTextureID aTexID, int x, int y,const RXRect& rect_on_image, int depth, RenderQueue aQueue, float angle, float aScale_x, float aScale_y, float parallax_factor_x, float parallax_factor_y, int center_x,int center_y)
+{
+	RenderImpl* lImpl = dynamic_cast<RenderImpl*>(mPartFuncts);
+	if (!lImpl)
+	{
+		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
 		return;
 	}
 
-	BlitTexture* it = new BlitTexture(lTex, SDL_Rect{ rect_on_image.x,rect_on_image.y,rect_on_image.w,rect_on_image.h }, aScale_x, aScale_y, parallax_factor_x, parallax_factor_y);
+	BlitTexture* it = new BlitTexture(aTexID, rect_on_image, aScale_x, aScale_y, parallax_factor_x, parallax_factor_y);
 	it->SetPosition(x, y);
 	it->SetCenter(center_x, center_y);
 	it->depth = depth;
@@ -278,6 +354,67 @@ void Render::RenderTexture(TextureID aTexID, int x, int y,const RXRect& rect_on_
 	it->angle = angle;
 
 	lImpl->GetQueue(aQueue)->push(it);
+}
+
+
+ParticleEmitter* Render::AddParticleEmitter(particle_preset* particle_preset, float x, float y, float lifespan, int depth)
+{
+	RenderImpl* lImpl = dynamic_cast<RenderImpl*>(mPartFuncts);
+	if (!lImpl)
+	{
+		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
+		return 0;
+	}
+
+	ParticleEmitter* emit = new ParticleEmitter(particle_preset, lifespan, x, y, depth);
+	lImpl->particles.push_back(emit);
+	return emit;
+}
+
+void Render::RemoveParticleEmitter(ParticleEmitter* _to_delete)
+{
+	RenderImpl* lImpl = dynamic_cast<RenderImpl*>(mPartFuncts);
+	if (!lImpl)
+	{
+		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
+		return;
+	}
+
+	lImpl->to_delete.insert(_to_delete);
+}
+
+bool Render::RenderImpl::UpdateParticles(float dt)
+{
+	for (std::list<ParticleEmitter*>::iterator it = particles.begin(); it != particles.end(); it++)
+	{
+		if (!(*it)->Loop(dt))
+		{
+			to_delete.insert(*it);
+		}
+	}
+
+	for (std::unordered_set<ParticleEmitter*>::iterator it = to_delete.begin(); it != to_delete.end(); it++)
+	{
+		delete(*it);
+		particles.erase(std::find(particles.begin(), particles.end(), *it));
+	}
+	to_delete.clear();
+
+	for (std::list<ParticleEmitter*>::iterator it = particles.begin(); it != particles.end(); it++)
+	{
+		mPartInst->mApp.GetImplementation<Render, Render::RenderImpl>()->RenderParticleEmitter(*it, RenderQueue::RENDER_GAME);
+	}
+
+	return true;
+}
+
+void Render::RenderImpl::ClearParticles()
+{
+	Logger::Console_log(LogLevel::LOG_INFO, "Clearing Particles");
+	for (std::list<ParticleEmitter*>::iterator it = particles.begin(); it != particles.end(); it++)
+	{
+		to_delete.insert(*it);
+	}
 }
 
 void Render::RenderAnimation(Animation& aAnimation, int x, int y, int aDepth, RenderQueue aQueue, float angle, float aScale_x, float aScale_y, float parallax_factor_x, float parallax_factor_y, int center_x, int center_y)
@@ -288,7 +425,7 @@ void Render::RenderAnimation(Animation& aAnimation, int x, int y, int aDepth, Re
 	RenderTexture(aAnimation.mTexture, x, y, aAnimation.GetCurrentFrame(), aDepth, aQueue, angle, aScale_x, aScale_y, parallax_factor_x, parallax_factor_y, center_x, center_y);
 }
 
-void Render::RenderText(const char* text, FontID font, int x, int y, int depth, const RXColor& aColor, RenderQueue aQueue, bool ignore_camera)
+void Render::RenderText(const char* text, RexFontID font, int x, int y, int depth, const RXColor& aColor, RenderQueue aQueue, bool ignore_camera)
 {
 	RenderImpl* lImpl = dynamic_cast<RenderImpl*>(mPartFuncts);
 	if (!lImpl)
@@ -296,19 +433,13 @@ void Render::RenderText(const char* text, FontID font, int x, int y, int depth, 
 		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
 		return;
 	}
-	Font* lFont = mApp.GetImplementation<Text, Text::TextImpl>()->GetFont(font);
+	RexFont* lFont = mApp.GetImplementation<Render, Render::RenderImpl>()->GetFont(font);
 	if(lFont == nullptr)
 	{
 		return;
 	}
 
-	SDL_Texture* lTexture = mApp.GetImplementation<Textures, Textures::TexturesImpl>()->Get_Texture(lFont->font_texture);
-	if (lTexture == nullptr)
-	{
-		return;
-	}
-
-	BlitItemText* it = new BlitItemText(text, lFont, lTexture);
+	BlitItemText* it = new BlitItemText(text, lFont);
 	it->ignore_camera = aQueue == RenderQueue::RENDER_UI || ignore_camera;
 	it->SetPosition(x, y);
 	it->color = { aColor.r, aColor.g, aColor.b, aColor.a };
@@ -376,14 +507,15 @@ void BlitTexture::Blit(Render::RenderImpl& aRender, Camera& camera, Window& aWin
 	rect.w = on_image.w * scale * scale_x;
 	rect.h = on_image.h * scale * scale_y;
 
-	SDL_Point p = { center_x,center_y };
+	RXPoint p = { center_x,center_y };
 	
 	RXRect lRect = { rect.x,rect.y,rect.w,rect.h };
 	if (!camera.isOnScreen(lRect, false))
 		return;
 
 	//aRender.CountDrawCall();
-	if (SDL_RenderCopyEx(aRender.GetSDL_Renderer(), tex, &on_image, &rect, angle, &p, SDL_FLIP_NONE) != 0)
+	//if (SDL_RenderCopyEx(aRender.GetSDL_Renderer(), tex, &on_image, &rect, angle, &p, SDL_FLIP_NONE) != 0)
+	if (aRender.RenderTexture(tex, lRect, on_image, angle, p, IMGFLIP::NONE) == false)
 	{
 		std::string errstr = "Cannot blit to screen. SDL_RenderCopy error: ";
 		errstr += SDL_GetError();
@@ -411,21 +543,23 @@ void BlitLayer::Blit(Render::RenderImpl& aRender, Camera& camera, Window& aWindo
 			float worldcoords_x = scale * _x * t->tile_width + camera.GetCameraXoffset();
 			float worldcoords_y = scale * _y * t->tile_height + camera.GetCameraYoffset();
 
+			if (mLayer->data[i] == -1)
+				continue;
+
 			//App->ren->BlitMapTile(t->texture, _x, _y, GetImageRectFromId((*it)->data[i]), depth, para_x, para_y);
 
-			SDL_Rect on_scn;
+			RXRect on_scn;
 			on_scn.x = worldcoords_x;
 			on_scn.y = worldcoords_y;
 			on_scn.w = 48 * scale;
 			on_scn.h = 48 * scale;
 
-			RXRect lRect = { on_scn.x,on_scn.y,on_scn.w,on_scn.h };
-			if (!camera.isOnScreen(lRect, false))
+			if (!camera.isOnScreen(on_scn, false))
 				continue;
 
 			//aRender.CountDrawCall();
 			//if (SDL_RenderCopyEx(aRender.GetSDL_Renderer(), tex, &GetImageRectFromId(mLayer->tileset_of_layer, mLayer->data[i]), &on_scn, 0, NULL, SDL_FLIP_NONE) != 0)
-			if (aRender.DrawSprite(t->texture, on_scn, &GetImageRectFromId(mLayer->tileset_of_layer, mLayer->data[i])))
+			if (aRender.RenderTexture(t->texture, on_scn, GetImageRectFromId(mLayer->tileset_of_layer, mLayer->data[i])) == false)
 			{
 				std::string errstr = "Cannot blit to screen. SDL_RenderCopy error: ";
 				errstr += SDL_GetError();
@@ -436,10 +570,10 @@ void BlitLayer::Blit(Render::RenderImpl& aRender, Camera& camera, Window& aWindo
 
 }
 
-SDL_Rect BlitLayer::GetImageRectFromId(tileset* t, int id)
+RXRect BlitLayer::GetImageRectFromId(tileset* t, int id)
 {
 
-	SDL_Rect rect;
+	RXRect rect;
 	rect.w = t->tile_width;
 	rect.h = t->tile_height;
 	rect.x = ((rect.w) * (id % t->columns));
@@ -450,9 +584,9 @@ SDL_Rect BlitLayer::GetImageRectFromId(tileset* t, int id)
 
 void BlitBackground::Blit(Render::RenderImpl& aRender, Camera& camera, Window& aWindow)
 {
-	int back_w, back_h;
-
-	SDL_QueryTexture(tex, NULL, NULL, &back_w, &back_h);
+	RexTexture* lTexture = aRender.GetTexture(tex);
+	if (lTexture == nullptr)
+		return;
 
 	float scale = aWindow.GetScale();
 	//calculate camera tile
@@ -466,7 +600,7 @@ void BlitBackground::Blit(Render::RenderImpl& aRender, Camera& camera, Window& a
 	camera.GetCameraPosition(cam_posx, cam_posy);
 	while (!exit)
 	{
-		if (cam_posx * parallax_x >= (j - 1) * back_w && cam_posx * parallax_x < j * back_w)
+		if (cam_posx * parallax_x >= (j - 1) * lTexture->mTextureWidth && cam_posx * parallax_x < j * lTexture->mTextureWidth)
 		{
 			exit = true;
 			cam_tile_x = j;
@@ -477,7 +611,7 @@ void BlitBackground::Blit(Render::RenderImpl& aRender, Camera& camera, Window& a
 	exit = false;
 	while (!exit)
 	{
-		if (cam_posy * parallax_y >= (j - 1) * back_h && cam_posy * parallax_y < j * back_h)
+		if (cam_posy * parallax_y >= (j - 1) * lTexture->mTextureHeight && cam_posy * parallax_y < j * lTexture->mTextureHeight)
 		{
 			exit = true;
 			cam_tile_y = j;
@@ -485,23 +619,24 @@ void BlitBackground::Blit(Render::RenderImpl& aRender, Camera& camera, Window& a
 		j++;
 	}
 
-	int rel_x = cam_posx - cam_tile_x * back_w;
-	int rel_y = cam_posy - cam_tile_y * back_h;
+	int rel_x = cam_posx - cam_tile_x * lTexture->mTextureWidth;
+	int rel_y = cam_posy - cam_tile_y * lTexture->mTextureHeight;
 
 	float cam_w, cam_h;
 	camera.GetCameraSize(cam_w, cam_h);
 
-	float images_that_fit_in_cam_x = cam_w / back_w;
-	float images_that_fit_in_cam_y = cam_h / back_h;
+	float images_that_fit_in_cam_x = cam_w / lTexture->mTextureWidth;
+	float images_that_fit_in_cam_y = cam_h / lTexture->mTextureHeight;
 
 	for (int i = 0; i <= images_that_fit_in_cam_x; ++i)
 	{
 		for (int j = 0; j <= images_that_fit_in_cam_y; ++j)
 		{
-			SDL_Rect rect;//DUAL LOOP THIS
+			RXRect rect;//DUAL LOOP THIS
+			RXRect UV;//DUAL LOOP THIS
 
-			int pos_x = ((cam_tile_x - 1 + i) * back_w) * scale;
-			int pos_y = ((cam_tile_y - 1 + j) * back_h) * scale;
+			int pos_x = ((cam_tile_x - 1 + i) * lTexture->mTextureWidth) * scale;
+			int pos_y = ((cam_tile_y - 1 + j) * lTexture->mTextureHeight) * scale;
 
 			rect.x = pos_x + camera.GetCameraXoffset() * scale * parallax_x;
 			rect.y = pos_y + camera.GetCameraYoffset() * scale * parallax_y;
@@ -511,14 +646,18 @@ void BlitBackground::Blit(Render::RenderImpl& aRender, Camera& camera, Window& a
 				rect.y = 0;// App->scn->room_h * 48 - App->cam->height;
 			}
 
-			rect.w = back_w;
-			rect.h = back_h;
+			rect.w = lTexture->mTextureWidth;
+			rect.h = lTexture->mTextureHeight;
 
 			rect.w *= scale;
 			rect.h *= scale;
 
+			UV = { 0,0,rect.w,rect.h };
+
 			//aRender.CountDrawCall();
-			if (SDL_RenderCopyEx(aRender.GetSDL_Renderer(), tex, NULL, &rect, 0, NULL, SDL_FLIP_NONE) != 0)
+			//if (SDL_RenderCopyEx(aRender.GetSDL_Renderer(), tex, NULL, &rect, 0, NULL, SDL_FLIP_NONE) != 0)
+			// TO DO OPENGL: RENDER BACKGROUNDS
+			if (aRender.RenderTexture(tex, rect,UV) == false)
 			{
 				std::string errstr = "Cannot blit to screen. SDL_RenderCopy error: ";
 				errstr += SDL_GetError();
@@ -557,14 +696,14 @@ void BlitRect::Blit(Render::RenderImpl& aRender, Camera& camera, Window& aWindow
 	if (!camera.isOnScreen(lRect, false))
 		return;
 
-	SDL_SetRenderDrawBlendMode(aRender.GetSDL_Renderer(), SDL_BLENDMODE_BLEND);
-	SDL_SetRenderDrawColor(aRender.GetSDL_Renderer(), color.r, color.g, color.b, color.a);
+	//SDL_SetRenderDrawBlendMode(aRender.GetSDL_Renderer(), SDL_BLENDMODE_BLEND);
+	//SDL_SetRenderDrawColor(aRender.GetSDL_Renderer(), color.r, color.g, color.b, color.a);
 	//SDL_SetRenderDrawColor(lRender->renderer, color.r, color.g, color.b, 255);
 
 	//aRender.CountDrawCall();
-	int result = (filled) ? SDL_RenderFillRect(aRender.GetSDL_Renderer(), &temp) : SDL_RenderDrawRect(aRender.GetSDL_Renderer(), &temp);
-
-	if (result != 0)
+	//int result = (filled) ? SDL_RenderFillRect(aRender.GetSDL_Renderer(), &temp) : SDL_RenderDrawRect(aRender.GetSDL_Renderer(), &temp);
+	bool lResult = aRender.RenderSquare(color, lRect, depth, filled);
+	if (!lResult)
 	{
 		std::string errstr = "Cannot draw quad to screen. SDL_RenderFillRect error: ";
 		errstr += SDL_GetError();
@@ -585,18 +724,19 @@ void BlitTrail::Blit(Render::RenderImpl& aRender, Camera& camera, Window& aWindo
 		}
 	}
 
-	SDL_SetRenderDrawBlendMode(aRender.GetSDL_Renderer(), SDL_BLENDMODE_BLEND);
-	SDL_SetRenderDrawColor(aRender.GetSDL_Renderer(), color.r, color.g, color.b, 255);// it's a debug feature so it'll have max visibility
-	int result = SDL_RenderDrawLines(aRender.GetSDL_Renderer(), points, amount);
+	//SDL_SetRenderDrawBlendMode(aRender.GetSDL_Renderer(), SDL_BLENDMODE_BLEND);
+	//SDL_SetRenderDrawColor(aRender.GetSDL_Renderer(), color.r, color.g, color.b, 255);// it's a debug feature so it'll have max visibility
+	//int result = SDL_RenderDrawLines(aRender.GetSDL_Renderer(), points, amount);
 
 	delete points;
 
-	if (result != 0)
-	{
-		std::string errstr = "Cannot draw trail to screen. SDL_RenderFillRect error: ";
-		errstr += SDL_GetError();
-		Logger::Console_log(LogLevel::LOG_ERROR, errstr.c_str());
-	}
+	//TO DO OPENGL: RENDER THE TRAIL
+	//if (result != 0)
+	//{
+	//	std::string errstr = "Cannot draw trail to screen. SDL_RenderFillRect error: ";
+	//	errstr += SDL_GetError();
+	//	Logger::Console_log(LogLevel::LOG_ERROR, errstr.c_str());
+	//}
 }
 
 void BlitParticles::Blit(Render::RenderImpl& aRender, Camera& camera, Window& aWindow)
@@ -628,7 +768,9 @@ void BlitParticles::Blit(Render::RenderImpl& aRender, Camera& camera, Window& aW
 				continue;
 
 			//aRender.CountDrawCall();
-			if (SDL_RenderCopyEx(aRender.GetSDL_Renderer(), tex, &lRectInText, &rect, lEmmitter->particles[i]->angle, NULL, SDL_FLIP_NONE) != 0)
+			//if (SDL_RenderCopyEx(aRender.GetSDL_Renderer(), tex, &lRectInText, &rect, lEmmitter->particles[i]->angle, NULL, SDL_FLIP_NONE) != 0)
+			//TO DO OPENGL: ADD CENTER TO THE CENTER OF QUAD
+			if (aRender.RenderTexture( lEmmitter->preset_for_emitter->texture_name, lRect,*lRecFromEmitter, lEmmitter->particles[i]->angle) == false)
 			{
 				std::string errstr = "Cannot blit to screen. SDL_RenderCopy error: ";
 				errstr += SDL_GetError();
@@ -660,8 +802,8 @@ void BlitItemText::Blit(Render::RenderImpl& aRender, Camera& camera, Window& aWi
 		}
 		else if (font_used->lMapping.count(mText[i]))
 		{
-			SDL_Rect* mappedRect = font_used->lMapping[mText[i]];
-			SDL_Rect on_screen = SDL_Rect{ x + length_so_far,y + yLevel, mappedRect->w, mappedRect->h };
+			RXRect* mappedRect = font_used->lMapping[mText[i]];
+			RXRect on_screen = RXRect{ x + length_so_far,y + yLevel, mappedRect->w, mappedRect->h };
 
 			length_so_far += on_screen.w;
 
@@ -670,7 +812,8 @@ void BlitItemText::Blit(Render::RenderImpl& aRender, Camera& camera, Window& aWi
 				continue;
 
 			//aRender.CountDrawCall();
-			if (SDL_RenderCopyEx(aRender.GetSDL_Renderer(), lFontTexture, mappedRect, &on_screen, 0, NULL, SDL_FLIP_NONE) != 0)
+			// TO DO OPENGL: TEXT PROCESSING AND RENDERING
+			if (aRender.RenderTexture(font_used->font_texture, on_screen, *mappedRect) == false)
 			{
 				std::string errstr = "Cannot blit to screen. SDL_RenderCopy error: ";
 				errstr += SDL_GetError();

@@ -111,18 +111,21 @@ bool Camera::CameraImpl::Loop(float dt)//camera can't go offbounds
 		if (is_covered)
 		{
 			Logger::Console_log(LogLevel::LOG_DEBUG, std::to_string(RXColor::GetBlack(alpha).a).c_str());
-			//mPartInst->mApp.GetModule<Render>().RenderRect(mPartInst->GetScreenArea(), RXColor::GetBlack(alpha), true, RenderQueue::RENDER_DEBUG, 0);
-			mPartInst->mApp.GetModule<Render>().RenderRect(mPartInst->GetScreenArea(), RXColor::GetBlack(alpha), true, RenderQueue::RENDER_DEBUG, 0);
+			//mPartInst->mApp.GetModule<::Render>().RenderRect(mPartInst->GetScreenArea(), RXColor::GetBlack(alpha), true, RenderQueue::RENDER_DEBUG, 0);
+			mPartInst->mApp.GetModule<::Render>().RenderRect(mPartInst->GetScreenArea(), RXColor::GetBlack(alpha), true, RenderQueue::RENDER_DEBUG, 0);
 
 		}
 
-		//mPartInst->mApp.GetModule<Render>().DrawRect(mPartInst->screenarea, mPartInst->r, mPartInst->g, mPartInst->b, mPartInst->alpha,true,RenderQueue::RENDER_DEBUG,-1000);
-		//mPartInst->mApp.GetModule<Render>().RenderRect(mPartInst->GetScreenArea(), RXColor{ 255, 0, 0, alpha }, true, RenderQueue::RENDER_DEBUG, 0);
+		//mPartInst->mApp.GetModule<::Render>().DrawRect(mPartInst->screenarea, mPartInst->r, mPartInst->g, mPartInst->b, mPartInst->alpha,true,RenderQueue::RENDER_DEBUG,-1000);
+		//mPartInst->mApp.GetModule<::Render>().RenderRect(mPartInst->GetScreenArea(), RXColor{ 255, 0, 0, alpha }, true, RenderQueue::RENDER_DEBUG, 0);
 	}
 	else { alpha = 0; }
 
-	mOrthoMatrix = glm::ortho(0.0f, 10.0f, 0.0f, 10.0f, -1000.0f, 1000.0f);
-	mViewMatrix = glm::lookAt(glm::vec3(0, 0, -1), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+	//mOrthoMatrix = glm::ortho(0.0f, 10.0f, 0.0f, 10.0f, -1000.0f, 1000.0f);
+	//mOrthoMatrix = glm::ortho(-200.0f, 200.0f, 200.0f, -200.0f, -10.0f, 10.0f);;
+	mOrthoMatrix = glm::ortho(0.0f, (float)window_w, (float)window_h, 0.0f, -10.0f, 10.0f);;
+	//mViewMatrix = glm::lookAt(glm::vec3(0, 0, -1), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+	mViewMatrix = glm::lookAt(glm::vec3(0, 0, 1), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
 	mViewMatrix = glm::inverse(mViewMatrix);
 
 	return true;

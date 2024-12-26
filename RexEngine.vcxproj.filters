@@ -32,8 +32,11 @@
     <Filter Include="Source Files\Tools\GLAD">
       <UniqueIdentifier>{7b15a0bc-e547-45a5-bece-9c61ca134e6e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Utils\Renderer">
-      <UniqueIdentifier>{0ecfa978-8d95-43a9-ac09-5b44e90a215e}</UniqueIdentifier>
+    <Filter Include="Source Files\Modules\Renderers">
+      <UniqueIdentifier>{6a459cf0-023b-48aa-acae-ae0fae2611e6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Modules\Renderers\BaseShaders">
+      <UniqueIdentifier>{1752ae43-4628-43ab-86e3-5d4a23ed2f7c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -58,12 +61,6 @@
     <ClCompile Include="src\Modules\Input.cpp">
       <Filter>Source Files\Modules</Filter>
     </ClCompile>
-    <ClCompile Include="src\Modules\ObjectManager.cpp">
-      <Filter>Source Files\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Modules\Particles.cpp">
-      <Filter>Source Files\Modules</Filter>
-    </ClCompile>
     <ClCompile Include="src\Modules\ProgressTracker.cpp">
       <Filter>Source Files\Modules</Filter>
     </ClCompile>
@@ -71,12 +68,6 @@
       <Filter>Source Files\Modules</Filter>
     </ClCompile>
     <ClCompile Include="src\Modules\SceneController.cpp">
-      <Filter>Source Files\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Modules\Text.cpp">
-      <Filter>Source Files\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Modules\Textures.cpp">
       <Filter>Source Files\Modules</Filter>
     </ClCompile>
     <ClCompile Include="src\Modules\Window.cpp">
@@ -106,8 +97,11 @@
     <ClCompile Include="lib\glad\include\glad\glad.c">
       <Filter>Source Files\Tools\GLAD</Filter>
     </ClCompile>
-    <ClCompile Include="src\Utils\Renderer\OpenGLRenderer.cpp">
-      <Filter>Source Files\Utils\Renderer</Filter>
+    <ClCompile Include="src\Modules\Renderers\OpenGLRenderer.cpp">
+      <Filter>Source Files\Modules\Renderers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Modules\Renderers\SDLRenderer.cpp">
+      <Filter>Source Files\Modules\Renderers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -174,12 +168,6 @@
     <ClInclude Include="include\Modules\Input.h">
       <Filter>Header Files\Parts</Filter>
     </ClInclude>
-    <ClInclude Include="include\Modules\ObjectManager.h">
-      <Filter>Header Files\Parts</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Modules\Particles.h">
-      <Filter>Header Files\Parts</Filter>
-    </ClInclude>
     <ClInclude Include="include\Modules\PartsDef.h">
       <Filter>Header Files\Parts</Filter>
     </ClInclude>
@@ -190,12 +178,6 @@
       <Filter>Header Files\Parts</Filter>
     </ClInclude>
     <ClInclude Include="include\Modules\SceneController.h">
-      <Filter>Header Files\Parts</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Modules\Text.h">
-      <Filter>Header Files\Parts</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Modules\Textures.h">
       <Filter>Header Files\Parts</Filter>
     </ClInclude>
     <ClInclude Include="include\Modules\Window.h">
@@ -222,12 +204,6 @@
     <ClInclude Include="src\Modules\InputImpl.h">
       <Filter>Source Files\Modules</Filter>
     </ClInclude>
-    <ClInclude Include="src\Modules\ObjectManagerImpl.h">
-      <Filter>Source Files\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Modules\ParticlesImpl.h">
-      <Filter>Source Files\Modules</Filter>
-    </ClInclude>
     <ClInclude Include="src\Modules\ProgressTrackerImpl.h">
       <Filter>Source Files\Modules</Filter>
     </ClInclude>
@@ -235,12 +211,6 @@
       <Filter>Source Files\Modules</Filter>
     </ClInclude>
     <ClInclude Include="src\Modules\SceneControllerImpl.h">
-      <Filter>Source Files\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Modules\TextImpl.h">
-      <Filter>Source Files\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Modules\TexturesImpl.h">
       <Filter>Source Files\Modules</Filter>
     </ClInclude>
     <ClInclude Include="src\Modules\WindowImpl.h">
@@ -258,11 +228,20 @@
     <ClInclude Include="lib\glad\include\glad\khrplatform.h">
       <Filter>Source Files\Tools\GLAD</Filter>
     </ClInclude>
-    <ClInclude Include="src\Utils\Renderer\OpenGLRenderer.h">
-      <Filter>Source Files\Utils\Renderer</Filter>
+    <ClInclude Include="src\Modules\Renderers\OpenGLRenderer.h">
+      <Filter>Source Files\Modules\Renderers</Filter>
     </ClInclude>
-    <ClInclude Include="src\Utils\Renderer\SpriteRenderer.h">
-      <Filter>Source Files\Utils\Renderer</Filter>
+    <ClInclude Include="include\EngineElements\BaseShaders\Instanced_BaseShader.h">
+      <Filter>Source Files\Modules\Renderers\BaseShaders</Filter>
+    </ClInclude>
+    <ClInclude Include="include\EngineElements\BaseShaders\Naive_BaseShader.h">
+      <Filter>Source Files\Modules\Renderers\BaseShaders</Filter>
+    </ClInclude>
+    <ClInclude Include="include\EngineElements\BaseShaders\RenderQuad_BaseShader.h">
+      <Filter>Source Files\Modules\Renderers\BaseShaders</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Modules\Renderers\SDLRenderer.h">
+      <Filter>Source Files\Modules\Renderers</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

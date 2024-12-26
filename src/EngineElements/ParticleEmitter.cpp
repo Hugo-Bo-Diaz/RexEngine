@@ -1,6 +1,5 @@
 #include "EngineElements/ParticleEmitter.h"
 #include "Application.h"
-#include "Modules/Textures.h"
 #include "Modules/Render.h"
 
 #include "Utils/Logger.h"

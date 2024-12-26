@@ -3,11 +3,12 @@
 #include "Modules/Render.h"
 #include "Modules/Input.h"
 #include "Modules/Debug.h"
+#include "Modules/SceneController.h"
 #include "Utils/Utils.h"
 #include <Psapi.h>
 
 #include "DebugImpl.h"
-#include "ObjectManagerImpl.h"
+#include "SceneControllerImpl.h"
 #include "GuiImpl.h"
 
 Debug::Debug(EngineAPI& aAPI) : Part("Debug",aAPI)
@@ -36,6 +37,8 @@ bool Debug::DebugImpl::Init()
 
 	mPanel = { 0,0,200,200 };
 
+	mPartInst->mApp.GetModule<Render>().LoadFont(mDebugFontPath.c_str(), {255,255,255,255 }, 18, mPartInst->mDebugPanelFont);
+
 	return true;
 }
 
@@ -53,7 +56,7 @@ bool Debug::DebugImpl::Loop(float dt)
 
 	if (mIsDebugPanelActive)
 	{
-		mPartInst->mApp.GetModule<Render>().RenderRect(mPanel, RXColor{ 0,0,0,220 }, true, RenderQueue::RENDER_DEBUG, 1, true);
+		mPartInst->mApp.GetModule<::Render>().RenderRect(mPanel, RXColor{ 0,0,0,220 }, true, RenderQueue::RENDER_DEBUG, 1, true);
 		std::string lString;
 
 		lString = "FPS: ";
@@ -67,18 +70,18 @@ bool Debug::DebugImpl::Loop(float dt)
 		float FPS = (1.0f / averageDT) * 1000;
 
 		lString += std::to_string(FPS);
-		mPartInst->mApp.GetModule<Render>().RenderText(lString.c_str(), mPartInst->mDebugPanelFont, 10, 20, 0, {255,255,255,255},RenderQueue::RENDER_DEBUG,true);
+		mPartInst->mApp.GetModule<::Render>().RenderText(lString.c_str(), mPartInst->mDebugPanelFont, 10, 20, 0, {255,255,255,255},RenderQueue::RENDER_DEBUG,true);
 		
 		float virmem,physmem;
 		mPartInst->GetTotalMemoryUsage(virmem,physmem);
 
 		lString = "Virt Mem: ";
 		lString += std::to_string(virmem);
-		mPartInst->mApp.GetModule<Render>().RenderText(lString.c_str(), mPartInst->mDebugPanelFont, 10, 45, 0, { 255,255,255,255 }, RenderQueue::RENDER_DEBUG, true);
+		mPartInst->mApp.GetModule<::Render>().RenderText(lString.c_str(), mPartInst->mDebugPanelFont, 10, 45, 0, { 255,255,255,255 }, RenderQueue::RENDER_DEBUG, true);
 
 		lString = "Phys Mem: ";
 		lString += std::to_string(physmem);
-		mPartInst->mApp.GetModule<Render>().RenderText(lString.c_str(), mPartInst->mDebugPanelFont, 10, 70, 0, {255,255,255,255 }, RenderQueue::RENDER_DEBUG, true);
+		mPartInst->mApp.GetModule<::Render>().RenderText(lString.c_str(), mPartInst->mDebugPanelFont, 10, 70, 0, {255,255,255,255 }, RenderQueue::RENDER_DEBUG, true);
 
 		lString = "CPU Usage: ";
 
@@ -91,20 +94,20 @@ bool Debug::DebugImpl::Loop(float dt)
 		float averageCPU = GetQueueMedianNumber(mCPUUsageQueue);
 
 		lString += std::to_string(averageCPU);
-		mPartInst->mApp.GetModule<Render>().RenderText(lString.c_str(), mPartInst->mDebugPanelFont, 10, 95, 0, { 255,255,255,255 }, RenderQueue::RENDER_DEBUG, true);
+		mPartInst->mApp.GetModule<::Render>().RenderText(lString.c_str(), mPartInst->mDebugPanelFont, 10, 95, 0, { 255,255,255,255 }, RenderQueue::RENDER_DEBUG, true);
 
 		lString = "Draw Calls: ";
-		lString += std::to_string(mPartInst->mApp.GetModule<Render>().GetDrawCallsLastFrame());
-		mPartInst->mApp.GetModule<Render>().RenderText(lString.c_str(), mPartInst->mDebugPanelFont, 10, 120, 0, { 255,255,255,255 }, RenderQueue::RENDER_DEBUG, true);
+		lString += std::to_string(mPartInst->mApp.GetModule<::Render>().GetDrawCallsLastFrame());
+		mPartInst->mApp.GetModule<::Render>().RenderText(lString.c_str(), mPartInst->mDebugPanelFont, 10, 120, 0, { 255,255,255,255 }, RenderQueue::RENDER_DEBUG, true);
 
 		lString = "Total Objects: ";
-		lString += std::to_string(mPartInst->mApp.GetModule<ObjectManager>().GetTotalObjectNumber());
-		mPartInst->mApp.GetModule<Render>().RenderText(lString.c_str(), mPartInst->mDebugPanelFont, 10, 145, 0, { 255,255,255,255 }, RenderQueue::RENDER_DEBUG, true);
+		lString += std::to_string(mPartInst->mApp.GetModule<SceneController>().GetTotalObjectNumber());
+		mPartInst->mApp.GetModule<::Render>().RenderText(lString.c_str(), mPartInst->mDebugPanelFont, 10, 145, 0, { 255,255,255,255 }, RenderQueue::RENDER_DEBUG, true);
 	}
 
 	if (mIsDebugSceneActive)
 	{
-		mPartInst->mApp.GetImplementation<ObjectManager,ObjectManager::ObjectManagerImpl>()->RenderDebug();
+		mPartInst->mApp.GetImplementation<SceneController, SceneController::SceneControllerImpl>()->RenderDebug();
 		mPartInst->mApp.GetImplementation<UserInterface,UserInterface::GuiImpl>()->RenderDebug();
 	}
 
@@ -113,9 +116,8 @@ bool Debug::DebugImpl::Loop(float dt)
 
 bool Debug::DebugImpl::LoadConfig(pugi::xml_node& lNode)
 {
-	std::string lFont = lNode.child("debug_font").first_child().value();
+	mDebugFontPath = lNode.child("debug_font").first_child().value();
 
-	mPartInst->mDebugPanelFont = mPartInst->mApp.GetModule<Text>().LoadFont(lFont.c_str(), { 255,255,255,255 }, 18);
 	return true;
 }
 

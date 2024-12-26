@@ -3,6 +3,8 @@
 
 #include "../include/Modules/SceneController.h"
 #include "PartImpl.h"
+#include "../include/Modules/Render.h"
+#include "DebugImpl.h"
 
 struct tileset
 {
@@ -17,7 +19,7 @@ struct tileset
 	int columns;
 	int total_tiles;
 
-	TextureID texture;
+	RexTextureID texture;
 };
 
 
@@ -44,10 +46,10 @@ struct layer
 
 struct background_texture
 {
-	background_texture(TextureID aTexID, float aParallax_x, float aParallax_y, int aDepth, const char* aPath, bool aRepeat_y)
+	background_texture(RexTextureID aTexID, float aParallax_x, float aParallax_y, int aDepth, const char* aPath, bool aRepeat_y)
 		: texture(aTexID), parallax_x(aParallax_x), parallax_y(aParallax_y), depth(aDepth), path(aPath), repeat_y(aRepeat_y) {};
 
-	TextureID texture;
+	RexTextureID texture;
 	float parallax_x;
 	float parallax_y;
 	int depth;
@@ -67,7 +69,13 @@ public:
 		mPartInst = aSceneController;
 	}
 
+	FactoryBase* GetFactory(std::type_index& aType);
+	FactoryBase* GetFactory(const char* aNameInMap);
+	void RenderDebug();
+
 protected:
+
+	bool Init();
 	bool Loop(float dt);
 	bool CleanUp();
 
@@ -84,6 +92,8 @@ private:
 	bool LoadMapExecute(const char* filename);
 	void LoadMapProperties(pugi::xml_node&);
 
+	GameObject* AddObject(int x, int y, int w_col, int h_col, std::type_index lType,EngineAPI& aAPI);
+
 	int room_w;
 	int room_h;
 
@@ -99,6 +109,14 @@ private:
 
 	std::function<void()> SceneFunction;
 	std::function<void()> LoadFunction;
+
+	//OBJECT MANAGER
+	bool is_paused = false;
+	RXRect* walls[MAX_WALLS];
+
+	std::list<FactoryBase*> mFactories;
+	std::list<GameObject*> objects;
+	std::unordered_set<GameObject*> to_delete;
 
 	friend class SceneController;
 	SceneController* mPartInst;

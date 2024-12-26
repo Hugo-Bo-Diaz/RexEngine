@@ -2,25 +2,19 @@
 #include "Application.h"
 
 #include "Modules/SceneController.h"
-#include "Modules/Textures.h"
 #include "Modules/Render.h"
-#include "Modules/ObjectManager.h"
 #include "Modules/Audio.h"
 #include "Modules/Camera.h"
 #include "Modules/ProgressTracker.h"
-#include "Modules/Particles.h"
 #include "Modules/Window.h"
 #include "Modules/Audio.h"
 #include "Utils/Logger.h"
 #include "EngineElements/GameObject.h"
 
 #include "Modules/Gui.h"
-#include "Modules/Text.h"
 
 #include "SceneControllerImpl.h"
 #include "RenderImpl.h"
-#include "ParticlesImpl.h"
-#include "ObjectManagerImpl.h"
 
 #include "Utils/Utils.h"
 
@@ -31,10 +25,55 @@ SceneController::SceneController(EngineAPI& aAPI):Part("SceneController",aAPI)
 
 #pragma region IMPLEMENTATION
 
-bool SceneController::SceneControllerImpl::Loop(float dt)
+bool SceneController::SceneControllerImpl::Init()
 {
 	bool ret = true;
 
+	for (int i = 0; i < MAX_WALLS; ++i)
+	{
+		walls[i] = nullptr;
+	}
+
+	return ret;
+}
+
+bool SceneController::SceneControllerImpl::Loop(float dt)
+{
+	//OBJECTS UPDATE
+	bool ret = true;
+
+	if (!is_paused)
+	{
+		for (std::list<GameObject*>::iterator it = objects.begin(); it != objects.end(); it++)
+		{
+			if ((*it)->active)
+			{
+				if (!(*it)->Loop(dt))
+				{
+					ret = false;
+				}
+			}
+		}
+	}
+
+	for (std::list<GameObject*>::iterator it = objects.begin(); it != objects.end(); it++)
+	{
+		if (!(*it)->Render())
+		{
+			ret = false;
+		}
+	}
+	//delete the current list
+	for (std::unordered_set<GameObject*>::iterator it = to_delete.begin(); it != to_delete.end(); it++)
+	{
+		(*it)->Destroy();
+		delete(*it);
+		objects.erase(std::find(objects.begin(), objects.end(), *it));
+
+	}
+	to_delete.clear();
+
+	//SCENE UPDATE
 	if (SceneFunction != nullptr)
 	{
 		SceneFunction();
@@ -63,7 +102,12 @@ bool SceneController::SceneControllerImpl::CleanUp()
 {
 	bool ret = true;
 	mPartInst->CleanMap();
-	mPartInst->mApp.GetModule<ObjectManager>().Clearphysics();
+	mPartInst->Clearphysics();
+
+	for (std::list<FactoryBase*>::iterator it = mFactories.begin(); it != mFactories.end(); it++)
+	{
+		delete* it;
+	}
 	return ret;
 }
 
@@ -82,10 +126,10 @@ bool SceneController::SceneControllerImpl::LoadTilesets(pugi::xml_node & node, c
 	base_folder += imagenode.attribute("source").as_string();
 
 	//load this texture
-	set->texture = mPartInst->mApp.GetModule<Textures>().Load_Texture(base_folder.c_str());
+	bool lResult = mPartInst->mApp.GetModule<::Render>().LoadTexture(base_folder.c_str(), set->texture);
 	tilesets.push_back(set);
 
-	return true;
+	return lResult;
 }
 
 bool SceneController::SceneControllerImpl::LoadBackgroundImage(pugi::xml_node& node, const char* aMapFolder)
@@ -124,9 +168,10 @@ bool SceneController::SceneControllerImpl::LoadBackgroundImage(pugi::xml_node& n
 	base_folder += path;
 
 	//load this texture
-	TextureID texture = mPartInst->mApp.GetModule<Textures>().Load_Texture(base_folder.c_str());
+	RexTextureID lTexture;
+	bool lResult = mPartInst->mApp.GetModule<::Render>().LoadTexture(base_folder.c_str(),lTexture);
 
-	background_texture* back = new background_texture(texture, parallax_x, parallax_y, depth, path, repeat_y);
+	background_texture* back = new background_texture(lTexture, parallax_x, parallax_y, depth, path, repeat_y);
 	active_backgrounds.push_back(back);
 
 	return true;
@@ -135,8 +180,8 @@ bool SceneController::SceneControllerImpl::LoadBackgroundImage(pugi::xml_node& n
 bool SceneController::SceneControllerImpl::LoadMapExecute(const char* filename)
 {
 	mPartInst->CleanMap();
-	mPartInst->mApp.GetModule<ObjectManager>().Clearphysics();
-	mPartInst->mApp.GetImplementation<Particles,Particles::ParticlesImpl>()->ClearParticles();
+	mPartInst->Clearphysics();
+	mPartInst->mApp.GetImplementation<Render,Render::RenderImpl>()->ClearParticles();
 
 	std::stringstream lStr;
 	lStr << "Loading map from: " << filename;
@@ -227,6 +272,7 @@ void SceneController::SceneControllerImpl::LoadMapProperties(pugi::xml_node & no
 	}
 }
 
+
 bool SceneController::SceneControllerImpl::LoadBackground(pugi::xml_node& imagelayer_node)
 {
 	pugi::xml_node image_node = imagelayer_node.first_child();
@@ -254,7 +300,7 @@ bool SceneController::SceneControllerImpl::LoadWalls(pugi::xml_node& objectgroup
 		newwall.y = object_iterator.attribute("y").as_int();
 		newwall.w = object_iterator.attribute("width").as_int();
 		newwall.h = object_iterator.attribute("height").as_int();
-		mPartInst->mApp.GetModule<ObjectManager>().AddWall(newwall);
+		mPartInst->AddWall(newwall);
 	}
 
 	return true;
@@ -310,7 +356,7 @@ bool SceneController::SceneControllerImpl::LoadObjects(pugi::xml_node& objectgro
 			lProperties.push_back(lObjProp);
 		}
 
-		auto lID = mPartInst->mApp.GetImplementation<ObjectManager,ObjectManager::ObjectManagerImpl>()->GetFactory(type.c_str());
+		auto lID = GetFactory(type.c_str());
 		
 		if (lID != nullptr)
 		{
@@ -324,7 +370,7 @@ bool SceneController::SceneControllerImpl::LoadObjects(pugi::xml_node& objectgro
 
 			ret->Init();
 
-			mPartInst->mApp.GetModule<ObjectManager>().AddObject(ret);
+			objects.push_back(ret);
 		}
 	}
 
@@ -391,6 +437,47 @@ bool SceneController::SceneControllerImpl::LoadTiles(pugi::xml_node & tile_node)
 	layers.push_back(new_layer);
 
 	return true;
+}
+
+void SceneController::SceneControllerImpl::RenderDebug()
+{
+	for (int i = 0; i < MAX_WALLS; ++i)
+	{
+		if (walls[i] != nullptr)
+		{
+			RXRect lRect = { walls[i]->x,walls[i]->y,walls[i]->w,walls[i]->h };
+			mPartInst->mApp.GetModule<::Render>().RenderRect(lRect, RXColor{ 0, 0, 255, 75 }, true, RenderQueue::RENDER_DEBUG, 0);
+		}
+	}
+
+	for (std::list<GameObject*>::iterator it = objects.begin(); it != objects.end(); it++)
+	{
+		(*it)->RenderDebug();
+		mPartInst->mApp.GetModule<::Render>().RenderRect((*it)->collider, RXColor { 0, 255, 0, 75 }, true, RenderQueue::RENDER_DEBUG, 0);
+	}
+}
+
+FactoryBase* SceneController::SceneControllerImpl::GetFactory(const char* aNameInMap)
+{
+	for (std::list<FactoryBase*>::iterator it = mFactories.begin(); it != mFactories.end(); it++)
+	{
+		if (strcmp((*it)->GetObjectMapName().c_str(), aNameInMap) == 0)
+		{
+			return (*it);
+		}
+	}
+	return nullptr;
+}
+FactoryBase* SceneController::SceneControllerImpl::GetFactory(std::type_index& aType)
+{
+	for (std::list<FactoryBase*>::iterator it = mFactories.begin(); it != mFactories.end(); it++)
+	{
+		if ((*it)->GetObjectTypeIndex() == aType)
+		{
+			return (*it);
+		}
+	}
+	return nullptr;
 }
 
 #pragma endregion
@@ -491,6 +578,289 @@ void SceneController::GetRoomSize(int& x, int& y)
 
 	x = lImpl->room_w;
 	y = lImpl->room_h;
+}
+
+void SceneController::GetNearbyWalls(int x, int y, int pxls_range, std::vector<RXRect*>& colliders_near)
+{
+	SceneControllerImpl* lImpl = dynamic_cast<SceneControllerImpl*>(mPartFuncts);
+	if (!lImpl)
+	{
+		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
+		return;
+	}
+
+	RXRect* toleration_area = new RXRect();
+	*toleration_area = { x - pxls_range, y - pxls_range, pxls_range * 2, pxls_range * 2 };
+
+	for (int i = 0; i < MAX_WALLS; ++i)
+	{
+		if (RXRectCollision(lImpl->walls[i], toleration_area))
+		{
+			colliders_near.push_back(lImpl->walls[i]);
+		}
+	}
+}
+std::vector<GameObject*>* SceneController::GetAllObjectsOfType(std::type_index info)
+{
+	SceneControllerImpl* lImpl = dynamic_cast<SceneControllerImpl*>(mPartFuncts);
+	if (!lImpl)
+	{
+		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
+		return nullptr;
+	}
+
+	std::vector<GameObject*>* ret = new std::vector<GameObject*>();
+
+	for (std::list<GameObject*>::iterator it = lImpl->objects.begin(); it != lImpl->objects.end(); it++)
+	{
+		if ((*it)->mType == info)
+		{
+			ret->push_back(*it);
+		}
+	}
+	return ret;
+}
+
+void SceneController::GetCollisions(RXRect* obj, std::vector<collision>& collisions)
+{
+	SceneControllerImpl* lImpl = dynamic_cast<SceneControllerImpl*>(mPartFuncts);
+	if (!lImpl)
+	{
+		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
+		return;
+	}
+
+	for (std::list<GameObject*>::iterator it = lImpl->objects.begin(); it != lImpl->objects.end(); it++)
+	{
+		if (RXRectCollision(&(*it)->collider, obj))
+		{
+			collision col;
+			col.object = *it;
+			collisions.push_back(col);
+		}
+	}
+}
+
+GameObject* SceneController::AddObject(int x, int y, int w_col, int h_col, std::type_index lType)
+{
+	SceneControllerImpl* lImpl = dynamic_cast<SceneControllerImpl*>(mPartFuncts);
+	if (!lImpl)
+	{
+		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
+		return nullptr;
+	}
+
+	return lImpl->AddObject(x, y, w_col, h_col, lType,mApp);
+}
+
+GameObject* SceneController::SceneControllerImpl::AddObject(int x, int y, int w_col, int h_col, std::type_index lType, EngineAPI& aApp)
+{
+	auto lID = GetFactory(lType);
+
+	std::list<ObjectProperty*> lPropList;
+
+	GameObject* r = nullptr;
+	if (lID != nullptr)
+	{
+		r = (*lID).CreateInstace();
+		if (r != nullptr)
+		{
+			r->mType = lID->GetObjectTypeIndex();
+			r->collider = { 0,0,0,0 };
+
+			r->Engine = new EngineAPI(aApp);
+			r->collider.x = x;
+			r->collider.y = y;
+			r->collider.w = w_col;
+			r->collider.h = h_col;
+
+			r->Init();
+
+			objects.push_back(r);
+		}
+		else
+		{
+			std::stringstream str;
+			str << "Attempted to create: " << lType.name() << " as GameObject, Invalid operation, please make sure that the class inherits from GameObject!";
+			Logger::Console_log(LogLevel::LOG_ERROR, str.str().c_str());
+		}
+	}
+	else
+	{
+		std::stringstream str;
+		str << "Attempted to create: " << lType.name() << " as GameObject, Invalid operation, Factory not registered!";
+		Logger::Console_log(LogLevel::LOG_ERROR, str.str().c_str());
+	}
+	return r;
+}
+
+int SceneController::GetTotalObjectNumber()
+{
+	SceneControllerImpl* lImpl = dynamic_cast<SceneControllerImpl*>(mPartFuncts);
+	if (!lImpl)
+	{
+		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
+		return 0;
+	}
+	return lImpl->objects.size();
+}
+
+void SceneController::AddObject(GameObject* lToAdd)
+{
+	SceneControllerImpl* lImpl = dynamic_cast<SceneControllerImpl*>(mPartFuncts);
+	if (!lImpl)
+	{
+		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
+		return;
+	}
+
+	if (lToAdd != nullptr)
+		lImpl->objects.push_back(lToAdd);
+}
+
+int SceneController::AddWall(RXRect& rect)
+{
+	SceneControllerImpl* lImpl = dynamic_cast<SceneControllerImpl*>(mPartFuncts);
+	if (!lImpl)
+	{
+		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
+		return -1;
+	}
+
+	int i = 0;
+	bool exit = false;
+
+	while (i < MAX_WALLS && !exit)
+	{
+		if (lImpl->walls[i] == nullptr)
+		{
+			exit = true;
+
+		}
+		else
+		{
+			++i;
+		}
+	}
+
+	RXRect* wall = new RXRect();
+	wall->x = rect.x;
+	wall->y = rect.y;
+	wall->w = rect.w;
+	wall->h = rect.h;
+
+	lImpl->walls[i] = wall;
+
+	return i;
+}
+
+void SceneController::DeleteWall(int id)
+{
+	SceneControllerImpl* lImpl = dynamic_cast<SceneControllerImpl*>(mPartFuncts);
+	if (!lImpl)
+	{
+		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
+		return;
+	}
+
+	delete lImpl->walls[id];
+	lImpl->walls[id] = nullptr;
+}
+
+bool SceneController::AddFactory(FactoryBase* aFactory)
+{
+	SceneControllerImpl* lImpl = dynamic_cast<SceneControllerImpl*>(mPartFuncts);
+	if (!lImpl)
+	{
+		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
+		return false;
+	}
+
+	lImpl->mFactories.push_back(aFactory);
+	return true;
+}
+
+bool SceneController::Clearphysics()
+{
+	SceneControllerImpl* lImpl = dynamic_cast<SceneControllerImpl*>(mPartFuncts);
+	if (!lImpl)
+	{
+		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
+		return false;
+	}
+
+	Logger::Console_log(LogLevel::LOG_INFO, "Clearing UI physics");
+	bool ret = true;
+
+	for (int i = 0; i < MAX_WALLS; ++i)
+	{
+		if (lImpl->walls[i] != nullptr)
+		{
+			delete lImpl->walls[i];
+			lImpl->walls[i] = nullptr;
+		}
+	}
+
+	for (std::list<GameObject*>::iterator it = lImpl->objects.begin(); it != lImpl->objects.end(); it++)
+	{
+		(*it)->Destroy();
+		delete (*it)->Engine;
+		delete* it;
+	}
+	lImpl->objects.clear();
+
+	return ret;
+}
+
+void SceneController::DeleteObject(GameObject* _to_delete)
+{
+	SceneControllerImpl* lImpl = dynamic_cast<SceneControllerImpl*>(mPartFuncts);
+	if (!lImpl)
+	{
+		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
+		return;
+	}
+
+	if (std::find(lImpl->to_delete.begin(), lImpl->to_delete.end(), _to_delete) == lImpl->to_delete.end())
+	{
+		lImpl->to_delete.insert(_to_delete);
+	}
+}
+
+bool SceneController::isPaused()
+{
+	SceneControllerImpl* lImpl = dynamic_cast<SceneControllerImpl*>(mPartFuncts);
+	if (!lImpl)
+	{
+		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
+		return true;
+	}
+
+	return lImpl->is_paused;
+}
+
+void SceneController::PauseObjects()
+{
+	SceneControllerImpl* lImpl = dynamic_cast<SceneControllerImpl*>(mPartFuncts);
+	if (!lImpl)
+	{
+		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
+		return;
+	}
+
+	lImpl->is_paused = true;
+}
+
+void SceneController::UnPauseObjects()
+{
+	SceneControllerImpl* lImpl = dynamic_cast<SceneControllerImpl*>(mPartFuncts);
+	if (!lImpl)
+	{
+		Logger::Console_log(LogLevel::LOG_ERROR, "Wrong format on the implementation class");
+		return;
+	}
+
+	lImpl->is_paused = false;
 }
 
 #pragma endregion

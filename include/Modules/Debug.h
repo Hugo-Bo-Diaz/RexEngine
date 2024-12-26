@@ -8,7 +8,7 @@
 
 #define MAX_DEBUG_QUEUE_DATA_SAMPLE 60
 
-typedef int FontID;
+typedef unsigned int RexFontID;
 //module that contains debug functionalities
 class DLL_EXPORT Debug : public Part
 {
@@ -36,7 +36,7 @@ public:
 	//deactivates the debug of the performance
 	void DeActivateDebugPerformance();
 	
-	FontID mDebugPanelFont;
+	RexFontID mDebugPanelFont;
 };
 
 #endif // !DEBUG__H

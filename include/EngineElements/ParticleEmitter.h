@@ -6,14 +6,12 @@
 #include "Utils/Timer.h"
 
 #include "Application.h"
-#include "Modules/Render.h"
-#include "Modules/Textures.h"
 
 #define MAX_PARTICLES 2000
 #define DLL_EXPORT __declspec(dllexport)
 
 
-struct SDL_Texture;
+typedef unsigned int RexTextureID;
 
 //class that contains the definition for a particle emmitter
 class DLL_EXPORT particle_preset
@@ -22,8 +20,8 @@ public:
 
 	//name of the preset 
 	std::string name;
-	//texture 
-	TextureID texture_name;
+	//texture
+	RexTextureID texture_name;
 
 	//possible sections of the texture
 	std::vector<RXRect*> area_in_texture;
